@@ -1,3 +1,4 @@
+declare var require: any;
 import { Component } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 import { RippleModule } from 'primeng/ripple';
@@ -17,9 +18,10 @@ import { RippleModule } from 'primeng/ripple';
                 <button pButton pRipple [rounded]="true" type="button" label="Get Started" class="!text-xl mt-8 !px-4"></button>
             </div>
             <div class="flex justify-center md:justify-end">
-                <img src="https://primefaces.org/cdn/templates/sakai/landing/screen-1.png" alt="Hero Image" class="w-9/12 md:w-auto" />
+                <img src="https://placehold.co/600x400" alt="Hero Image" class="w-9/12 md:w-auto" /> <!-- Use placeholder image -->
             </div>
         </div>
     `
 })
-export class HeroWidget {}
+export class HeroWidget {
+}
