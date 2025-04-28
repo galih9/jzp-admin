@@ -27,9 +27,9 @@ export class AppMenu {
             {
                 label: 'Kanji',
                 items: [
-                    { label: 'Radical Management', icon: 'pi pi-fw pi-book', routerLink: ['/uikit/formlayout'] },
-                    { label: 'Kanji Management', icon: 'pi pi-fw pi-book', routerLink: ['/uikit/input'] },
-                    { label: 'Vocab Management', icon: 'pi pi-fw pi-book', class: 'rotated-icon', routerLink: ['/uikit/button'] }
+                    { label: 'Radical Management', icon: 'pi pi-fw pi-book', routerLink: ['/pages/radical'], routerLinkActiveOptions: { exact: false } },
+                    { label: 'Kanji Management', icon: 'pi pi-fw pi-book', routerLink: ['/pages/kanji'], routerLinkActiveOptions: { exact: false } },
+                    { label: 'Vocab Management', icon: 'pi pi-fw pi-book', routerLink: ['/pages/vocab'], routerLinkActiveOptions: { exact: false } }
                 ]
             },
             {
@@ -40,12 +40,14 @@ export class AppMenu {
                     {
                         label: 'Account Center',
                         icon: 'pi pi-fw pi-users',
-                        routerLink: ['/landing']
+                        routerLink: ['/pages/users/active'],
+                        routerLinkActiveOptions: { exact: false }
                     },
                     {
                         label: 'Feedback List',
                         icon: 'pi pi-fw pi-envelope',
-                        routerLink: ['/landing']
+                        routerLink: ['/pages/feedbacks/all'],
+                        routerLinkActiveOptions: { exact: false }
                     }
                 ]
             }
