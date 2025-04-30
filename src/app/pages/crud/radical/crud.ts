@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AutoCompleteCompleteEvent, AutoCompleteModule } from 'primeng/autocomplete';
@@ -9,6 +9,7 @@ import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { InputTextModule } from 'primeng/inputtext';
 import { TableModule } from 'primeng/table';
 import { TextareaModule } from 'primeng/textarea';
+import { IRadicalDetail } from '../../types/kanji';
 
 @Component({
     selector: 'r-crud',
@@ -47,7 +48,7 @@ import { TextareaModule } from 'primeng/textarea';
             <div class="my-3 flex flex-col">
                 <p class="font-semibold text-xl">Found In Kanji List</p>
                 <div class="mb-3 flex gap-x-3">
-                    <p-autocomplete [(ngModel)]="kj" [suggestions]="listKanji" (completeMethod)="search($event)" />
+                    <p-autocomplete [(ngModel)]="localForm.autoKanji" [suggestions]="listKanji" (completeMethod)="search($event)" />
 
                     <p-button label="Add" icon="pi pi-plus" severity="secondary" class="mr-2" (onClick)="addMoreKanji()" />
                 </div>
@@ -84,8 +85,12 @@ import { TextareaModule } from 'primeng/textarea';
         </div>
     `
 })
-export class RadicalCrud {
-    kj = '';
+export class RadicalCrud implements OnInit {
+    currentData!: IRadicalDetail;
+    localForm = {
+        autoKanji: '',
+    };
+
     listKanji = [];
     secondaryMeaning = [{ value: '', id: 0 }];
     kanji: { char: string; meaning: string; hiragana: string }[] = [
@@ -98,6 +103,17 @@ export class RadicalCrud {
     items: any[] = [];
 
     constructor(private router: Router) {}
+
+    ngOnInit(): void {
+        this.currentData = {
+            char: '',
+            meaningPrimary: '',
+            meaningSecondary: [],
+            mnemonic: '',
+            meaningHint: '',
+            foundInKanji: []
+        };
+    }
 
     search(event: AutoCompleteCompleteEvent) {
         this.items = [...Array(10).keys()].map((item) => event.query + '-' + item);

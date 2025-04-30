@@ -18,9 +18,10 @@ import { TagModule } from 'primeng/tag';
 import { InputIconModule } from 'primeng/inputicon';
 import { IconFieldModule } from 'primeng/iconfield';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { IKanji, KanjiService } from '../../service/hiragana.service';
+import { KanjiService } from '../../service/hiragana.service';
 import { StyleClassModule } from 'primeng/styleclass';
 import { Router, RouterModule, NavigationEnd } from '@angular/router';
+import { IKanji } from '../../types/kanji';
 
 interface Column {
     field: string;
@@ -162,7 +163,7 @@ interface ExportColumn {
                     <th style="width: 3rem">
                         <p-tableHeaderCheckbox />
                     </th>
-                    <th pSortableColumn="character" style="min-width:16rem">
+                    <th pSortableColumn="character" style="min-width:6rem">
                         Character
                         <p-sortIcon field="character" />
                     </th>
@@ -174,19 +175,6 @@ interface ExportColumn {
                         Meaning
                         <p-sortIcon field="meaning" />
                     </th>
-                    <th pSortableColumn="totalLearned" style="min-width: 12rem">
-                        User Learned
-                        <p-sortIcon field="totalLearned" />
-                    </th>
-                    <th pSortableColumn="totalReviewed" style="min-width: 12rem">
-                        User Reviewed
-                        <p-sortIcon field="totalReviewed" />
-                    </th>
-                    <th pSortableColumn="rating" style="min-width: 12rem">
-                        Rating
-                        <p-sortIcon field="rating" />
-                    </th>
-                    <th style="min-width: 12rem">Status</th>
                     <th style="min-width: 12rem">Action</th>
                 </tr>
             </ng-template>
@@ -195,17 +183,9 @@ interface ExportColumn {
                     <td style="width: 3rem">
                         <p-tableCheckbox [value]="kanji" />
                     </td>
-                    <td style="min-width: 12rem">{{ kanji.char }}</td>
-                    <td style="min-width: 16rem">{{ kanji.hiragana }}</td>
-                    <td>{{ kanji.meaning }}</td>
-                    <td>{{ kanji.totalLearned }}</td>
-                    <td>{{ kanji.totalReviewed }}</td>
-                    <td>
-                        <p-rating [(ngModel)]="kanji.rating" [readonly]="true" />
-                    </td>
-                    <td>
-                        <p-tag [value]="kanji.status ?? 'PUBLIC'" [severity]="getSeverity(kanji.status)" />
-                    </td>
+                    <td style="min-width: 6rem">{{ kanji.char }}</td>
+                    <td style="min-width: 8rem">{{ kanji.hiragana }}</td>
+                    <td>{{ kanji.meaningPrimary }}</td>
                     <td>
                         <p-button icon="pi pi-pencil" class="mr-2" [rounded]="true" [outlined]="true" (click)="editProduct()" pStyleClass=".boxmain" leaveActiveClass="hidden" leaveToClass="animate-slideup animate-duration-500 " />
                         <p-button icon="pi pi-trash" severity="danger" [rounded]="true" [outlined]="true" (click)="deleteProduct(kanji)" />
@@ -219,13 +199,12 @@ interface ExportColumn {
 export class KanjiList implements OnInit {
     kanjiList = signal<IKanji[]>([]);
 
-    kanji!: IKanji;
+    kanji: IKanji | undefined;
 
     selectedKanji!: IKanji[] | null;
 
     submitted: boolean = false;
 
-    statuses!: any[];
     cols!: Column[];
     showTable: boolean = true;
 
@@ -251,12 +230,6 @@ export class KanjiList implements OnInit {
         this.kanjiService.getKanjiList().then((data) => {
             this.kanjiList.set(data);
         });
-
-        this.statuses = [
-            { label: 'ACTIVE', value: 'instock' },
-            { label: 'ARCHIVED', value: 'lowstock' },
-            { label: 'ON TRASHCAN', value: 'outofstock' }
-        ];
 
         this.cols = [
             { field: 'code', header: 'Code', customExportHeader: 'Product Code' },
@@ -306,8 +279,8 @@ export class KanjiList implements OnInit {
             header: 'Confirm',
             icon: 'pi pi-exclamation-triangle',
             accept: () => {
-                this.kanjiList.set(this.kanjiList().filter((val) => val.id !== product.id));
-                this.kanji = {};
+                this.kanjiList.set(this.kanjiList().filter((val) => val.char !== product.char));
+                this.kanji = undefined;
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Successful',
@@ -318,39 +291,6 @@ export class KanjiList implements OnInit {
         });
     }
 
-    findIndexById(id: string): number {
-        let index = -1;
-        for (let i = 0; i < this.kanjiList().length; i++) {
-            if (this.kanjiList()[i].id === id) {
-                index = i;
-                break;
-            }
-        }
-
-        return index;
-    }
-
-    createId(): string {
-        let id = '';
-        var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-        for (var i = 0; i < 5; i++) {
-            id += chars.charAt(Math.floor(Math.random() * chars.length));
-        }
-        return id;
-    }
-
-    getSeverity(status: string) {
-        switch (status) {
-            case 'ACTIVE':
-                return 'success';
-            case 'ARCHIVED':
-                return 'warn';
-            case 'ON TRASHCAN':
-                return 'danger';
-            default:
-                return 'info';
-        }
-    }
 
     saveProduct() {
         this.submitted = true;

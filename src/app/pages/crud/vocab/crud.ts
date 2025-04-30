@@ -37,11 +37,19 @@ import { TextareaModule } from 'primeng/textarea';
                 <p-button label="add more" severity="secondary" class="mr-2" (onClick)="addMore()" />
             </div>
             <div class="my-3 flex flex-col">
-                <p class="font-semibold text-xl">Meaning Mnemonic</p>
+                <p class="font-semibold text-xl">Meaning Explanation</p>
                 <textarea rows="5" cols="30" pTextarea></textarea>
             </div>
             <div class="my-3 flex flex-col">
                 <p class="font-semibold text-xl">Hint Notes</p>
+                <textarea rows="5" cols="30" pTextarea></textarea>
+            </div>
+            <div class="my-3 flex flex-col">
+                <p class="font-semibold text-xl">Reading</p>
+                <input pInputText type="text" placeholder="Default" />
+            </div>
+            <div class="my-3 flex flex-col">
+                <p class="font-semibold text-xl">Reading Explanation</p>
                 <textarea rows="5" cols="30" pTextarea></textarea>
             </div>
             <div class="my-3 flex flex-col">

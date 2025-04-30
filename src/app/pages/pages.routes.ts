@@ -1,5 +1,4 @@
 import { Routes } from '@angular/router';
-import { Documentation } from './documentation/documentation';
 import { Empty } from './empty/empty';
 import { RadicalList } from './crud/radical/list';
 import { RadicalCrud } from './crud/radical/crud';

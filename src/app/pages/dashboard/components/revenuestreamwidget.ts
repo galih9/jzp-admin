@@ -7,8 +7,8 @@ import { LayoutService } from '../../../layout/service/layout.service';
     standalone: true,
     selector: 'app-revenue-stream-widget',
     imports: [ChartModule],
-    template: `<div class="card !mb-8">
-        <div class="font-semibold text-xl mb-4">Revenue Stream</div>
+    template: `<div class="card">
+        <div class="font-semibold text-xl mb-4">Users Activity</div>
         <p-chart type="bar" [data]="chartData" [options]="chartOptions" class="h-80" />
     </div>`
 })
@@ -36,25 +36,25 @@ export class RevenueStreamWidget {
         const textMutedColor = documentStyle.getPropertyValue('--text-color-secondary');
 
         this.chartData = {
-            labels: ['Q1', 'Q2', 'Q3', 'Q4'],
+            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Des'],
             datasets: [
                 {
                     type: 'bar',
-                    label: 'Subscriptions',
+                    label: 'Item Learned',
                     backgroundColor: documentStyle.getPropertyValue('--p-primary-400'),
                     data: [4000, 10000, 15000, 4000],
                     barThickness: 32
                 },
                 {
                     type: 'bar',
-                    label: 'Advertising',
+                    label: 'Item Burned',
                     backgroundColor: documentStyle.getPropertyValue('--p-primary-300'),
                     data: [2100, 8400, 2400, 7500],
                     barThickness: 32
                 },
                 {
                     type: 'bar',
-                    label: 'Affiliate',
+                    label: 'Item Reviewed',
                     backgroundColor: documentStyle.getPropertyValue('--p-primary-200'),
                     data: [4100, 5200, 3400, 7400],
                     borderRadius: {
