@@ -18,10 +18,10 @@ import { TagModule } from 'primeng/tag';
 import { InputIconModule } from 'primeng/inputicon';
 import { IconFieldModule } from 'primeng/iconfield';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { KanjiService } from '../../service/hiragana.service';
 import { StyleClassModule } from 'primeng/styleclass';
 import { Router, RouterModule, NavigationEnd } from '@angular/router';
 import { IKanji } from '../../types/kanji';
+import { KanjiService } from '../../service/kanji.service';
 
 interface Column {
     field: string;
@@ -59,68 +59,6 @@ interface ExportColumn {
         StyleClassModule,
         RouterModule
     ],
-    styles: [
-        `
-            :host ::ng-deep {
-                /* Slide In/Out from Left */
-                @keyframes slide-left-in {
-                    0% {
-                        transform: translateX(100%);
-                        opacity: 0.5;
-                    }
-                    100% {
-                        transform: translateX(0);
-                        opacity: 1;
-                    }
-                }
-                @keyframes slide-left-out {
-                    0% {
-                        transform: translateX(0);
-                        opacity: 1;
-                    }
-                    100% {
-                        transform: translateX(-100%);
-                        opacity: 0.5;
-                    }
-                }
-
-                /* Slide In/Out from Right */
-                @keyframes slide-right-in {
-                    0% {
-                        transform: translateX(-100%);
-                        opacity: 0.5;
-                    }
-                    100% {
-                        transform: translateX(0);
-                        opacity: 1;
-                    }
-                }
-                @keyframes slide-right-out {
-                    0% {
-                        transform: translateX(0);
-                        opacity: 1;
-                    }
-                    100% {
-                        transform: translateX(100%);
-                        opacity: 0.5;
-                    }
-                }
-
-                .animate-slide-left-in {
-                    animation: slide-left-in 0.5s ease-out forwards;
-                }
-                .animate-slide-left-out {
-                    animation: slide-left-out 0.5s ease-in forwards;
-                }
-                .animate-slide-right-in {
-                    animation: slide-right-in 0.5s ease-out forwards;
-                }
-                .animate-slide-right-out {
-                    animation: slide-right-out 0.5s ease-in forwards;
-                }
-            }
-        `
-    ],
     template: `
         <div class="overflow-hidden">
             <p-toolbar styleClass="mb-6">
@@ -134,7 +72,8 @@ interface ExportColumn {
         <router-outlet></router-outlet>
 
         <!-- Hide table if a child route is active -->
-        <p-table *ngIf="showTable"
+        <p-table
+            *ngIf="showTable"
             #dt
             [value]="kanjiList()"
             [rows]="10"
@@ -185,9 +124,9 @@ interface ExportColumn {
                     </td>
                     <td style="min-width: 6rem">{{ kanji.char }}</td>
                     <td style="min-width: 8rem">{{ kanji.hiragana }}</td>
-                    <td>{{ kanji.meaningPrimary }}</td>
+                    <td>{{ kanji.meaning_primary }}</td>
                     <td>
-                        <p-button icon="pi pi-pencil" class="mr-2" [rounded]="true" [outlined]="true" (click)="editProduct()" pStyleClass=".boxmain" leaveActiveClass="hidden" leaveToClass="animate-slideup animate-duration-500 " />
+                        <p-button icon="pi pi-pencil" class="mr-2" [rounded]="true" [outlined]="true" (click)="editProduct(kanji)" pStyleClass=".boxmain" leaveActiveClass="hidden" leaveToClass="animate-slideup animate-duration-500 " />
                         <p-button icon="pi pi-trash" severity="danger" [rounded]="true" [outlined]="true" (click)="deleteProduct(kanji)" />
                     </td>
                 </tr>
@@ -219,16 +158,18 @@ export class KanjiList implements OnInit {
         // Set initial state based on the current URL
         this.showTable = !this.router.url.includes('/alter');
         this.loadDemoData();
-        this.router.events.subscribe(event => {
+        this.router.events.subscribe((event) => {
             if (event instanceof NavigationEnd) {
                 this.showTable = !event.urlAfterRedirects.includes('/alter');
             }
-        }); 
+        });
     }
 
     loadDemoData() {
         this.kanjiService.getKanjiList().then((data) => {
-            this.kanjiList.set(data);
+            if (data.success) {
+                this.kanjiList.set(data.data);
+            }
         });
 
         this.cols = [
@@ -247,8 +188,12 @@ export class KanjiList implements OnInit {
         this.router.navigate(['/pages/kanji/alter']);
     }
 
-    editProduct() {
-        this.router.navigate(['/pages/kanji/alter']);
+    editProduct(kanji: IKanji) {
+        this.router.navigate(['/pages/kanji/alter'], {
+            queryParams: {
+                char: kanji.char
+            }
+        });
     }
 
     deleteSelectedProducts() {
@@ -290,7 +235,6 @@ export class KanjiList implements OnInit {
             }
         });
     }
-
 
     saveProduct() {
         this.submitted = true;

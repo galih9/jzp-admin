@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { AutoCompleteCompleteEvent, AutoCompleteModule } from 'primeng/autocomplete';
 import { ButtonModule } from 'primeng/button';
 import { InputGroup } from 'primeng/inputgroup';
@@ -10,26 +10,28 @@ import { InputTextModule } from 'primeng/inputtext';
 import { TableModule } from 'primeng/table';
 import { TextareaModule } from 'primeng/textarea';
 import { IKanji, IKanjiDetail, IRadical, IVocab } from '../../types/kanji';
+import { KanjiService } from '../../service/kanji.service';
+import { EditorModule } from 'primeng/editor';
 
 @Component({
     selector: 'k-crud',
-    imports: [TableModule, ButtonModule, InputTextModule, CommonModule, InputGroupAddonModule, InputGroup, FormsModule, TextareaModule, AutoCompleteModule],
+    imports: [TableModule, ButtonModule, InputTextModule, CommonModule, InputGroupAddonModule, InputGroup, FormsModule, TextareaModule, AutoCompleteModule, EditorModule],
     standalone: true,
     template: `
         <div class="p-6 bg-white mb-6">
             <div class="my-3 flex flex-col">
                 <p class="font-semibold text-xl">Char</p>
-                <input pInputText type="text" placeholder="Default" [(ngModel)]="currentData.char" />
+                <input pInputText type="text" placeholder="Character" [(ngModel)]="currentData.char" />
             </div>
             <div class="my-3 flex flex-col">
                 <p class="font-semibold text-xl">Meaning Primary</p>
-                <input pInputText type="text" placeholder="Default" [(ngModel)]="currentData.meaningPrimary" />
+                <input pInputText type="text" placeholder="Meaning Primary" [(ngModel)]="currentData.meaning_primary" />
             </div>
             <div class="my-3">
                 <p class="font-semibold text-xl">Meaning secondary</p>
                 <div class="flex flex-col gap-y-3 mb-3">
                     <p-inputgroup *ngFor="let item of secondaryMeaning">
-                        <input pInputText placeholder="Vote" [(ngModel)]="item.value" />
+                        <input pInputText placeholder="Meaning Alternative" [(ngModel)]="item.value" />
                         <p-inputgroup-addon *ngIf="item.id > 0">
                             <p-button icon="pi pi-times" (onClick)="removeItem(item.id)" />
                         </p-inputgroup-addon>
@@ -39,28 +41,45 @@ import { IKanji, IKanjiDetail, IRadical, IVocab } from '../../types/kanji';
             </div>
             <div class="my-3 flex flex-col">
                 <p class="font-semibold text-xl">Meaning Mnemonic</p>
-                <textarea rows="5" cols="30" pTextarea [(ngModel)]="currentData.mnemonic"></textarea>
+                <p-editor [(ngModel)]="currentData.meaning_mnemonic" [style]="{ height: '100px' }" />
             </div>
             <div class="my-3 flex flex-col">
                 <p class="font-semibold text-xl">Hint Notes</p>
-                <textarea rows="5" cols="30" pTextarea [(ngModel)]="currentData.meaningHint"></textarea>
+                <textarea rows="5" cols="30" pTextarea [(ngModel)]="currentData.meaning_hint"></textarea>
             </div>
 
-            <div class="my-3 flex flex-col">
+            <div class="my-3">
                 <p class="font-semibold text-xl">Reading On'yomi</p>
-                <input pInputText type="text" placeholder="Default" [(ngModel)]="currentData.onyomi" />
+                <div class="flex flex-col gap-y-3 mb-3">
+                    <p-inputgroup *ngFor="let item of onyomiReading">
+                        <input pInputText placeholder="Onyomi" [(ngModel)]="item.value" />
+                        <p-inputgroup-addon *ngIf="item.id > 0">
+                            <p-button icon="pi pi-times" (onClick)="removeItem(item.id)" />
+                        </p-inputgroup-addon>
+                    </p-inputgroup>
+                </div>
+                <p-button label="add more" severity="secondary" class="mr-2" (onClick)="addMore()" />
             </div>
-            <div class="my-3 flex flex-col">
+            <div class="my-3">
                 <p class="font-semibold text-xl">Reading Kunyomi</p>
-                <input pInputText type="text" placeholder="Default" [(ngModel)]="currentData.kunyomi" />
+                <div class="flex flex-col gap-y-3 mb-3">
+                    <p-inputgroup *ngFor="let item of kunyomiReading">
+                        <input pInputText placeholder="Kunyomi" [(ngModel)]="item.value" />
+                        <p-inputgroup-addon *ngIf="item.id > 0">
+                            <p-button icon="pi pi-times" (onClick)="removeItem(item.id)" />
+                        </p-inputgroup-addon>
+                    </p-inputgroup>
+                </div>
+                <p-button label="add more" severity="secondary" class="mr-2" (onClick)="addMore()" />
             </div>
             <div class="my-3 flex flex-col">
                 <p class="font-semibold text-xl">Reading Mnemonic</p>
-                <textarea rows="5" cols="30" pTextarea [(ngModel)]="currentData.readingMnemonic"></textarea>
+                <p-editor [(ngModel)]="currentData.reading_mnemonic" [style]="{ height: '100px' }" />
+                <!-- <textarea rows="5" cols="30" pTextarea [(ngModel)]="currentData.reading_mnemonic"></textarea> -->
             </div>
             <div class="my-3 flex flex-col">
                 <p class="font-semibold text-xl">Reading Hint Notes</p>
-                <textarea rows="5" cols="30" pTextarea [(ngModel)]="currentData.readingHint"></textarea>
+                <textarea rows="5" cols="30" pTextarea [(ngModel)]="currentData.reading_hint"></textarea>
             </div>
 
             <div class="my-3 flex flex-col">
@@ -189,29 +208,79 @@ export class KanjiCrud implements OnInit {
     listVocab = [];
 
     secondaryMeaning = [{ value: '', id: 0 }];
+    onyomiReading = [{ value: '', id: 0 }];
+    kunyomiReading = [{ value: '', id: 0 }];
     kanji: IKanji[] = [];
     radical: IRadical[] = [];
     vocab: IVocab[] = [];
     items: any[] = [];
 
-    constructor(private router: Router) {}
+    constructor(
+        private router: Router,
+        private route: ActivatedRoute,
+        private kanjiService: KanjiService
+    ) {}
 
     ngOnInit(): void {
         this.currentData = {
             char: '',
-            meaningPrimary: '',
-            meaningSecondary: [],
-            mnemonic: '',
-            meaningHint: '',
-            onyomi: '',
-            kunyomi: '',
-            readingMnemonic: '',
-            readingHint: '',
+            meaning_primary: '',
+            meaning_secondary: [],
+            meaning_mnemonic: '',
+            meaning_hint: '',
+            onyomi: [],
+            kunyomi: [],
+            reading_mnemonic: '',
+            reading_hint: '',
             hiragana: '',
             radicalsCombination: [],
             visuallySimilarKanji: [],
             foundInVocab: []
         };
+        const char = this.route.snapshot.queryParamMap.get('char');
+        if (char) {
+            this.kanjiService.getKanjiDetail(char).then((data) => {
+                if (data.success) {
+                    let resp = data.data!;
+                    if (resp.meaning_secondary) {
+                        this.secondaryMeaning = [];
+                        for (let i = 0; i < resp.meaning_secondary.length; i++) {
+                            const element = resp.meaning_secondary[i];
+                            this.secondaryMeaning.push({ value: element, id: i });
+                        }
+                    }
+                    if (resp.onyomi) {
+                        this.onyomiReading = [];
+                        for (let i = 0; i < resp.onyomi.length; i++) {
+                            const element = resp.onyomi[i];
+                            this.onyomiReading.push({ value: element, id: i });
+                        }
+                    }
+                    if (resp.kunyomi) {
+                        this.kunyomiReading = [];
+                        for (let i = 0; i < resp.kunyomi.length; i++) {
+                            const element = resp.kunyomi[i];
+                            this.kunyomiReading.push({ value: element, id: i });
+                        }
+                    }
+                    this.currentData = {
+                        char: resp.char,
+                        meaning_primary: resp.meaning_primary,
+                        meaning_secondary: resp.meaning_secondary,
+                        meaning_mnemonic: resp.meaning_mnemonic,
+                        meaning_hint: resp.meaning_hint,
+                        onyomi: resp.onyomi,
+                        kunyomi: resp.kunyomi,
+                        reading_mnemonic: resp.reading_mnemonic,
+                        reading_hint: resp.reading_hint,
+                        hiragana: resp.hiragana,
+                        radicalsCombination: [],
+                        visuallySimilarKanji: [],
+                        foundInVocab: []
+                    };
+                }
+            });
+        }
     }
 
     search(event: AutoCompleteCompleteEvent) {
@@ -241,7 +310,7 @@ export class KanjiCrud implements OnInit {
     addMoreKanji() {
         this.kanji.push({
             char: '生',
-            meaningPrimary: 'fresh',
+            meaning_primary: 'fresh',
             hiragana: 'なま'
         });
     }

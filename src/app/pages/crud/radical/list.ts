@@ -18,7 +18,7 @@ import { TagModule } from 'primeng/tag';
 import { InputIconModule } from 'primeng/inputicon';
 import { IconFieldModule } from 'primeng/iconfield';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { KanjiService } from '../../service/hiragana.service';
+import { RadicalService } from '../../service/radical.service';
 import { StyleClassModule } from 'primeng/styleclass';
 import { Router, RouterModule, NavigationEnd } from '@angular/router';
 import { IRadical } from '../../types/kanji';
@@ -122,7 +122,7 @@ interface Column {
             </ng-template>
         </p-table>
     `,
-    providers: [MessageService, KanjiService, ConfirmationService]
+    providers: [MessageService, RadicalService, ConfirmationService]
 })
 export class RadicalList implements OnInit {
     kanjiList = signal<IRadical[]>([]);
@@ -138,7 +138,7 @@ export class RadicalList implements OnInit {
     showTable: boolean = true;
 
     constructor(
-        private kanjiService: KanjiService,
+        private radicalService: RadicalService,
         private messageService: MessageService,
         private confirmationService: ConfirmationService,
         private router: Router
@@ -156,9 +156,9 @@ export class RadicalList implements OnInit {
     }
 
     loadDemoData() {
-        this.kanjiService.getKanjiList().then((data) => {
-            this.kanjiList.set(data);
-        });
+        // this.kanjiService.getKanjiList().then((data) => {
+        //     this.kanjiList.set(data);
+        // });
 
         this.statuses = [
             { label: 'ACTIVE', value: 'instock' },

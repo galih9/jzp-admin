@@ -1,20 +1,30 @@
+import { IBaseResponse } from './general';
+
+export interface IResponseKanjiList extends IBaseResponse {
+    data: IKanji[];
+}
+
+export interface IResponseKanjiDetail extends IBaseResponse {
+    data: IKanjiDetail | null;
+}
+
 export interface IKanji {
     char: string;
     hiragana: string;
-    meaningPrimary: string;
+    meaning_primary: string;
 }
 
 export interface IKanjiDetail extends IKanji {
-    meaningSecondary: string[];
-    mnemonic: string
-    meaningHint: string;
-    kunyomi: string;
-    onyomi: string;
-    readingMnemonic: string;
-    readingHint: string;
-    visuallySimilarKanji: IKanji[]
-    radicalsCombination: IRadical[]
-    foundInVocab: IVocab[]
+    meaning_secondary: string[];
+    meaning_mnemonic: string;
+    meaning_hint: string;
+    kunyomi: string[];
+    onyomi: string[];
+    reading_mnemonic: string;
+    reading_hint: string;
+    visuallySimilarKanji: IKanji[];
+    radicalsCombination: IRadical[];
+    foundInVocab: IVocab[];
 }
 
 export interface IRadical {
@@ -26,7 +36,7 @@ export interface IRadicalDetail extends IRadical {
     meaningSecondary: string[];
     mnemonic: string;
     meaningHint: string;
-    foundInKanji: IKanji[]
+    foundInKanji: IKanji[];
 }
 
 export interface IVocab {
@@ -37,7 +47,7 @@ export interface IVocab {
 
 export interface ISentence {
     char: string;
-    meaning: string
+    meaning: string;
 }
 
 export interface IVocabDetail extends IVocab {
@@ -47,7 +57,7 @@ export interface IVocabDetail extends IVocab {
     reading: string;
     readingExplanation: string;
     readingExplanationHint: string;
-    contextPattern: ISentence[]
-    contextSentences: ISentence[]
-    kanjiComposition: IKanji[]
+    contextPattern: ISentence[];
+    contextSentences: ISentence[];
+    kanjiComposition: IKanji[];
 }

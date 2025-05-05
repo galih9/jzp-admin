@@ -18,7 +18,6 @@ import { TagModule } from 'primeng/tag';
 import { InputIconModule } from 'primeng/inputicon';
 import { IconFieldModule } from 'primeng/iconfield';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { KanjiService } from '../../service/hiragana.service';
 import { StyleClassModule } from 'primeng/styleclass';
 import { Router, RouterModule, NavigationEnd } from '@angular/router';
 import { IVocab } from '../../types/kanji';
@@ -127,7 +126,7 @@ interface Column {
             </ng-template>
         </p-table>
     `,
-    providers: [MessageService, KanjiService, ConfirmationService]
+    providers: [MessageService, ConfirmationService]
 })
 export class VocabList implements OnInit {
     kanjiList = signal<IVocab[]>([]);
@@ -143,7 +142,6 @@ export class VocabList implements OnInit {
     showTable: boolean = true;
 
     constructor(
-        private kanjiService: KanjiService,
         private messageService: MessageService,
         private confirmationService: ConfirmationService,
         private router: Router
@@ -161,9 +159,9 @@ export class VocabList implements OnInit {
     }
 
     loadDemoData() {
-        this.kanjiService.getKanjiList().then((data) => {
-            this.kanjiList.set(data);
-        });
+        // this.kanjiService.getKanjiList().then((data) => {
+        //     this.kanjiList.set(data);
+        // });
 
         this.statuses = [
             { label: 'ACTIVE', value: 'instock' },
