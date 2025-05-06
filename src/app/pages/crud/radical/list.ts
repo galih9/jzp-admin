@@ -1,7 +1,7 @@
 import { Component, OnInit, signal, ViewChild } from '@angular/core';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { Table, TableModule } from 'primeng/table';
-import { CommonModule } from '@angular/common';
+import { CommonModule, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { RippleModule } from 'primeng/ripple';
@@ -18,10 +18,10 @@ import { TagModule } from 'primeng/tag';
 import { InputIconModule } from 'primeng/inputicon';
 import { IconFieldModule } from 'primeng/iconfield';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { RadicalService } from '../../service/radical.service';
 import { StyleClassModule } from 'primeng/styleclass';
 import { Router, RouterModule, NavigationEnd } from '@angular/router';
-import { IRadical } from '../../types/kanji';
+import { IKanji, IRadical } from '../../types/kanji';
+import { KanjiService } from '../../service/kanji.service';
 
 interface Column {
     field: string;
@@ -58,16 +58,31 @@ interface Column {
         <div class="overflow-hidden">
             <p-toolbar styleClass="mb-6">
                 <ng-template #start>
-                    <p-button label="New" icon="pi pi-plus" severity="secondary" class="mr-2" (onClick)="openNew()" />
-                    <p-button severity="secondary" label="Delete" icon="pi pi-trash" outlined (onClick)="deleteSelectedProducts()" [disabled]="!selectedKanji || !selectedKanji.length" />
+                    <p-button
+                        [label]="isCrud ? 'Back' : 'New'"
+                        [icon]="isCrud ? 'pi pi-times' : 'pi pi-plus'"
+                        severity="secondary"
+                        class="mr-2"
+                        (onClick)="openNew()"
+                    />
+                    <p-button
+                        severity="secondary"
+                        label="Delete"
+                        icon="pi pi-trash"
+                        outlined
+                        (onClick)="deleteSelectedProducts()"
+                        [disabled]="!selectedKanji || !selectedKanji.length"
+                    />
                 </ng-template>
             </p-toolbar>
         </div>
+        <p-toast />
 
         <router-outlet></router-outlet>
 
         <!-- Hide table if a child route is active -->
-        <p-table *ngIf="showTable"
+        <p-table
+            *ngIf="showTable"
             #dt
             [value]="kanjiList()"
             [rows]="10"
@@ -87,7 +102,12 @@ interface Column {
                     <h5 class="m-0">Manage Radicals</h5>
                     <p-iconfield>
                         <p-inputicon styleClass="pi pi-search" />
-                        <input pInputText type="text" (input)="onGlobalFilter(dt, $event)" placeholder="Search..." />
+                        <input
+                            pInputText
+                            type="text"
+                            (input)="onGlobalFilter(dt, $event)"
+                            placeholder="Search..."
+                        />
                     </p-iconfield>
                 </div>
             </ng-template>
@@ -113,34 +133,51 @@ interface Column {
                         <p-tableCheckbox [value]="kanji" />
                     </td>
                     <td>{{ kanji.char }}</td>
-                    <td>{{ kanji.meaningPrimary }}</td>
+                    <td>{{ kanji.meaning_primary }}</td>
                     <td>
-                        <p-button icon="pi pi-pencil" class="mr-2" [rounded]="true" [outlined]="true" (click)="editProduct()" pStyleClass=".boxmain" leaveActiveClass="hidden" leaveToClass="animate-slideup animate-duration-500 " />
-                        <p-button icon="pi pi-trash" severity="danger" [rounded]="true" [outlined]="true" (click)="deleteProduct(kanji)" />
+                        <p-button
+                            icon="pi pi-pencil"
+                            class="mr-2"
+                            [rounded]="true"
+                            [outlined]="true"
+                            (click)="editProduct(kanji)"
+                            pStyleClass=".boxmain"
+                            leaveActiveClass="hidden"
+                            leaveToClass="animate-slideup animate-duration-500 "
+                        />
+                        <p-button
+                            icon="pi pi-trash"
+                            severity="danger"
+                            [rounded]="true"
+                            [outlined]="true"
+                            (click)="deleteProduct(kanji)"
+                        />
                     </td>
                 </tr>
             </ng-template>
         </p-table>
     `,
-    providers: [MessageService, RadicalService, ConfirmationService]
+    providers: [MessageService, KanjiService, ConfirmationService]
 })
 export class RadicalList implements OnInit {
-    kanjiList = signal<IRadical[]>([]);
+    kanjiList = signal<IKanji[]>([]);
 
-    radical!: IRadical | undefined;
+    radical!: IKanji | undefined;
 
-    selectedKanji!: IRadical[] | null;
+    selectedKanji!: IKanji[] | null;
 
     submitted: boolean = false;
 
     statuses!: any[];
     cols!: Column[];
     showTable: boolean = true;
+    isCrud: boolean = false;
 
     constructor(
-        private radicalService: RadicalService,
+        private kanjiService: KanjiService,
         private messageService: MessageService,
         private confirmationService: ConfirmationService,
+        private location: Location,
         private router: Router
     ) {}
 
@@ -148,17 +185,19 @@ export class RadicalList implements OnInit {
         // Set initial state based on the current URL
         this.showTable = !this.router.url.includes('/alter');
         this.loadDemoData();
-        this.router.events.subscribe(event => {
+        this.router.events.subscribe((event) => {
             if (event instanceof NavigationEnd) {
                 this.showTable = !event.urlAfterRedirects.includes('/alter');
             }
-        }); 
+        });
     }
 
     loadDemoData() {
-        // this.kanjiService.getKanjiList().then((data) => {
-        //     this.kanjiList.set(data);
-        // });
+        this.kanjiService.getRadicalList().then((data) => {
+            if (data.success) {
+                this.kanjiList.set(data.data);
+            }
+        });
 
         this.statuses = [
             { label: 'ACTIVE', value: 'instock' },
@@ -179,11 +218,25 @@ export class RadicalList implements OnInit {
     }
 
     openNew() {
-        this.router.navigate(['/pages/radical/alter']);
+        this.isCrud = !this.isCrud;
+        if (this.isCrud) {
+            this.router.navigate(['/pages/radical/alter']);
+        } else {
+            this.location.back();
+        }
     }
 
-    editProduct() {
-        this.router.navigate(['/pages/radical/alter']);
+    editProduct(kanji: IKanji) {
+        this.isCrud = !this.isCrud;
+        if (this.isCrud) {
+            this.router.navigate(['/pages/radical/alter'], {
+                queryParams: {
+                    char: kanji.char
+                }
+            });
+        } else {
+            this.location.back();
+        }
     }
 
     deleteSelectedProducts() {
@@ -192,7 +245,9 @@ export class RadicalList implements OnInit {
             header: 'Confirm',
             icon: 'pi pi-exclamation-triangle',
             accept: () => {
-                this.kanjiList.set(this.kanjiList().filter((val) => !this.selectedKanji?.includes(val)));
+                this.kanjiList.set(
+                    this.kanjiList().filter((val) => !this.selectedKanji?.includes(val))
+                );
                 this.selectedKanji = null;
                 this.messageService.add({
                     severity: 'success',

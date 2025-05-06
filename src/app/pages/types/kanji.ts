@@ -9,6 +9,7 @@ export interface IResponseKanjiDetail extends IBaseResponse {
 }
 
 export interface IKanji {
+    lesson_id?: string;
     char: string;
     hiragana: string;
     meaning_primary: string;
@@ -37,6 +38,14 @@ export interface IRadicalDetail extends IRadical {
     mnemonic: string;
     meaningHint: string;
     foundInKanji: IKanji[];
+}
+
+export interface IPayloadAddRadical {
+    char: string;
+    meaning: string;
+    meaningMnemonic: string;
+    meaningHint: string;
+    foundInKanji: string[];
 }
 
 export interface IVocab {

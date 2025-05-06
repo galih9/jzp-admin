@@ -1,57 +1,105 @@
-import { CommonModule } from '@angular/common';
+import { CommonModule, Location } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
-import { AutoCompleteCompleteEvent, AutoCompleteModule } from 'primeng/autocomplete';
+import { ActivatedRoute } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
-import { InputGroup } from 'primeng/inputgroup';
 import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { InputTextModule } from 'primeng/inputtext';
 import { TableModule } from 'primeng/table';
 import { TextareaModule } from 'primeng/textarea';
-import { IRadicalDetail } from '../../types/kanji';
+import { IKanji, IPayloadAddRadical, IRadicalDetail } from '../../types/kanji';
+import { KanjiService } from '../../service/kanji.service';
+import { EditorModule } from 'primeng/editor';
+import { Listbox } from 'primeng/listbox';
+import { ToastModule } from 'primeng/toast';
+import { MessageService } from 'primeng/api';
 
 @Component({
     selector: 'r-crud',
-    imports: [TableModule, ButtonModule, InputTextModule, CommonModule, InputGroupAddonModule, InputGroup, FormsModule, TextareaModule, AutoCompleteModule],
+    imports: [
+        TableModule,
+        ButtonModule,
+        InputTextModule,
+        CommonModule,
+        InputGroupAddonModule,
+        FormsModule,
+        TextareaModule,
+        EditorModule,
+        FormsModule,
+        Listbox
+    ],
     standalone: true,
+    providers: [MessageService],
     template: `
         <div class="p-3 bg-white mb-6">
             <div class="my-3 flex flex-col">
                 <p class="font-semibold text-xl">Char</p>
-                <input pInputText type="text" placeholder="Default" />
+                <input
+                    pInputText
+                    type="text"
+                    placeholder="Default"
+                    [(ngModel)]="currentData.char"
+                />
             </div>
             <div class="my-3 flex flex-col">
                 <p class="font-semibold text-xl">Meaning Primary</p>
-                <input pInputText type="text" placeholder="Default" />
-            </div>
-            <div class="my-3">
-                <p class="font-semibold text-xl">Meaning secondary</p>
-                <div class="flex flex-col gap-y-3 mb-3">
-                    <p-inputgroup *ngFor="let item of secondaryMeaning">
-                        <input pInputText placeholder="Vote" [(ngModel)]="item.value" />
-                        <p-inputgroup-addon *ngIf="item.id > 0">
-                            <p-button icon="pi pi-times" (onClick)="removeItem(item.id)" />
-                        </p-inputgroup-addon>
-                    </p-inputgroup>
-                </div>
-                <p-button label="add more" severity="secondary" class="mr-2" (onClick)="addMore()" />
+                <input
+                    pInputText
+                    type="text"
+                    placeholder="Default"
+                    [(ngModel)]="currentData.meaningPrimary"
+                />
             </div>
             <div class="my-3 flex flex-col">
                 <p class="font-semibold text-xl">Meaning Mnemonic</p>
-                <textarea rows="5" cols="30" pTextarea></textarea>
+                <p-editor [(ngModel)]="currentData.mnemonic" [style]="{ height: '100px' }" />
             </div>
             <div class="my-3 flex flex-col">
                 <p class="font-semibold text-xl">Hint Notes</p>
-                <textarea rows="5" cols="30" pTextarea></textarea>
+                <textarea
+                    rows="5"
+                    cols="30"
+                    pTextarea
+                    [(ngModel)]="currentData.meaningHint"
+                ></textarea>
             </div>
             <div class="my-3 flex flex-col">
                 <p class="font-semibold text-xl">Found In Kanji List</p>
                 <div class="mb-3 flex gap-x-3">
-                    <p-autocomplete [(ngModel)]="localForm.autoKanji" [suggestions]="listKanji" (completeMethod)="search($event)" />
-
-                    <p-button label="Add" icon="pi pi-plus" severity="secondary" class="mr-2" (onClick)="addMoreKanji()" />
+                    <input
+                        pInputText
+                        type="text"
+                        placeholder="Default"
+                        [(ngModel)]="localForm.autoKanji"
+                    />
+                    <p-button
+                        label="Search"
+                        icon="pi pi-search"
+                        severity="secondary"
+                        class="mr-2"
+                        (onClick)="findKanji()"
+                    />
+                    <p-button
+                        label="Add"
+                        icon="pi pi-plus"
+                        severity="secondary"
+                        class="mr-2"
+                        (onClick)="addMoreKanji()"
+                    />
                 </div>
+                <p-listbox
+                    *ngIf="showOption"
+                    [options]="listKanji"
+                    [(ngModel)]="selectedKanji"
+                    optionLabel="name"
+                    class="w-full md:w-56 mb-3"
+                >
+                    <ng-template #item let-listKanji>
+                        <div class="flex items-center gap-2">
+                            <div>{{ listKanji.char }}</div>
+                        </div>
+                    </ng-template>
+                </p-listbox>
                 <p-table [value]="kanji" showGridlines [tableStyle]="{ 'min-width': '50rem' }">
                     <ng-template pTemplate="header">
                         <tr>
@@ -65,11 +113,15 @@ import { IRadicalDetail } from '../../types/kanji';
                     <ng-template pTemplate="body" let-kanji>
                         <tr>
                             <td>{{ kanji.char }}</td>
-                            <td>{{ kanji.meaning }}</td>
+                            <td>{{ kanji.meaning_primary }}</td>
                             <td>{{ kanji.hiragana }}</td>
                             <td>
-                                <p-button icon="pi pi-pencil" class="mr-2" [rounded]="true" [outlined]="true" pStyleClass=".boxmain" leaveActiveClass="hidden" leaveToClass="animate-slideup animate-duration-500 " />
-                                <p-button icon="pi pi-trash" severity="danger" [rounded]="true" [outlined]="true" />
+                                <p-button
+                                    icon="pi pi-trash"
+                                    severity="danger"
+                                    [rounded]="true"
+                                    [outlined]="true"
+                                />
                             </td>
                         </tr>
                     </ng-template>
@@ -81,59 +133,126 @@ import { IRadicalDetail } from '../../types/kanji';
                     </ng-template>
                 </p-table>
             </div>
-            <p-button label="Cancel" icon="pi pi-times" severity="secondary" class="mr-2" (onClick)="goBack()" />
+            <div class="flex gap-x-3">
+                <p-button
+                    label="Cancel"
+                    icon="pi pi-times"
+                    fluid
+                    severity="secondary"
+                    class="w-full"
+                    (onClick)="goBack()"
+                />
+                <p-button
+                    label="Add"
+                    icon="pi pi-plus"
+                    fluid
+                    severity="primary"
+                    class="w-full"
+                    (onClick)="goAdd()"
+                />
+            </div>
         </div>
     `
 })
 export class RadicalCrud implements OnInit {
-    currentData!: IRadicalDetail;
+    currentData: IRadicalDetail = {
+        char: '',
+        meaningPrimary: '',
+        meaningSecondary: [],
+        mnemonic: '',
+        meaningHint: '',
+        foundInKanji: []
+    };
     localForm = {
-        autoKanji: '',
+        autoKanji: ''
     };
 
-    listKanji = [];
-    secondaryMeaning = [{ value: '', id: 0 }];
-    kanji: { char: string; meaning: string; hiragana: string }[] = [
-        // {
-        //     char: '生',
-        //     meaning: 'fresh',
-        //     hiragana: 'なま'
-        // }
-    ];
+    listKanji: IKanji[] = [];
+    selectedKanji: IKanji | undefined;
+    showOption: boolean = false;
+    kanji: IKanji[] = [];
+
     items: any[] = [];
 
-    constructor(private router: Router) {}
+    constructor(
+        private route: ActivatedRoute,
+        private kanjiService: KanjiService,
+        private messageService: MessageService,
+        private location: Location
+    ) {}
 
     ngOnInit(): void {
-        this.currentData = {
-            char: '',
-            meaningPrimary: '',
-            meaningSecondary: [],
-            mnemonic: '',
-            meaningHint: '',
-            foundInKanji: []
-        };
+        const char = this.route.snapshot.queryParamMap.get('char');
+        if (char) {
+            this.kanjiService.getRadicalDetail(char).then((data) => {
+                if (data.success) {
+                    let resp = data.data!;
+                    this.currentData = {
+                        char: resp.char,
+                        meaningPrimary: resp.meaning_primary,
+                        meaningSecondary: resp.meaning_secondary,
+                        mnemonic: resp.meaning_mnemonic,
+                        meaningHint: resp.meaning_hint,
+                        foundInKanji: []
+                    };
+                }
+            });
+        }
     }
 
-    search(event: AutoCompleteCompleteEvent) {
-        this.items = [...Array(10).keys()].map((item) => event.query + '-' + item);
-    }
-    removeItem(index: number) {
-        this.secondaryMeaning = this.secondaryMeaning.filter((item) => item.id !== index);
-    }
-    addMore() {
-        const lastItem = this.secondaryMeaning[this.secondaryMeaning.length - 1];
-        const newId = lastItem ? lastItem.id + 1 : 0;
-        this.secondaryMeaning.push({ value: '', id: newId });
+    async findKanji() {
+        this.showOption = !this.showOption;
+        let resp = await this.kanjiService.searchKanjiList(
+            this.localForm.autoKanji == '' ? '' : this.localForm.autoKanji
+        );
+        if (resp.success && Array.isArray(resp.data)) {
+            this.listKanji = resp.data.map((item) => ({
+                char: item.char,
+                meaning_primary: item.meaning_primary,
+                hiragana: item.hiragana,
+                lesson_id: item.lesson_id
+            }));
+        } else {
+            this.listKanji = [];
+        }
     }
     addMoreKanji() {
-        this.kanji.push({
-            char: '生',
-            meaning: 'fresh',
-            hiragana: 'なま'
-        });
+        if (this.selectedKanji != undefined) {
+            console.log(this.selectedKanji)
+            this.kanji.push(this.selectedKanji);
+            this.selectedKanji = undefined;
+            this.listKanji = [];
+            this.showOption = false;
+        }
     }
     goBack() {
-        this.router.navigate(['/pages/radical']);
+        this.location.back();
+    }
+
+    async goAdd() {
+        let payload: IPayloadAddRadical = {
+            char: this.currentData.char,
+            meaning: this.currentData.meaningPrimary,
+            meaningMnemonic: this.currentData.mnemonic,
+            meaningHint: this.currentData.meaningHint,
+            foundInKanji: this.kanji.map((item) => item.lesson_id ?? '')
+        };
+        let resp = await this.kanjiService.addRadical(payload);
+        if (resp.success) {
+            this.messageService.add({
+                severity: 'success',
+                summary: 'Success',
+                detail: 'Data Created',
+                life: 3000
+            });
+            this.goBack();
+        } else {
+            this.messageService.add({
+                severity: 'error',
+                summary: 'Error',
+                detail: resp.message,
+                life: 3000
+            });
+        }
     }
 }
