@@ -1,6 +1,6 @@
-import { Component, OnInit, signal, ViewChild } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { ConfirmationService, MessageService } from 'primeng/api';
-import { Table, TableModule } from 'primeng/table';
+import { Table, TableModule, TablePageEvent } from 'primeng/table';
 import { CommonModule, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
@@ -63,39 +63,41 @@ interface Column {
                         [icon]="isCrud ? 'pi pi-times' : 'pi pi-plus'"
                         severity="secondary"
                         class="mr-2"
-                        (onClick)="openNew()"
+                        (onClick)="onNewOrBack()"
                     />
                     <p-button
                         severity="secondary"
                         label="Delete"
                         icon="pi pi-trash"
                         outlined
-                        (onClick)="deleteSelectedProducts()"
+                        (onClick)="onDeleteSelected()"
                         [disabled]="!selectedKanji || !selectedKanji.length"
                     />
                 </ng-template>
             </p-toolbar>
         </div>
         <p-toast />
-
         <router-outlet></router-outlet>
 
-        <!-- Hide table if a child route is active -->
         <p-table
             *ngIf="showTable"
             #dt
             [value]="kanjiList()"
-            [rows]="10"
+            [rows]="perPage"
+            [first]="page"
             [columns]="cols"
             [paginator]="true"
+            [totalRecords]="totalRecords"
+            [lazy]="true"
+            (onPage)="onPageChange($event)"
             [globalFilterFields]="['name', 'country.name', 'representative.name', 'status']"
             [tableStyle]="{ 'min-width': '75rem' }"
             [(selection)]="selectedKanji"
             [rowHover]="true"
             dataKey="id"
-            currentPageReportTemplate="Showing {first} to {last} of {totalRecords} products"
+            currentPageReportTemplate="Showing {first} to {last} of {totalRecords} radicals"
             [showCurrentPageReport]="true"
-            [rowsPerPageOptions]="[10, 20, 30]"
+            [rowsPerPageOptions]="[5, 10, 20]"
         >
             <ng-template #caption>
                 <div class="flex items-center justify-between">
@@ -140,7 +142,7 @@ interface Column {
                             class="mr-2"
                             [rounded]="true"
                             [outlined]="true"
-                            (click)="editProduct(kanji)"
+                            (click)="onEdit(kanji)"
                             pStyleClass=".boxmain"
                             leaveActiveClass="hidden"
                             leaveToClass="animate-slideup animate-duration-500 "
@@ -150,7 +152,7 @@ interface Column {
                             severity="danger"
                             [rounded]="true"
                             [outlined]="true"
-                            (click)="deleteProduct(kanji)"
+                            (click)="onDelete(kanji)"
                         />
                     </td>
                 </tr>
@@ -161,17 +163,26 @@ interface Column {
 })
 export class RadicalList implements OnInit {
     kanjiList = signal<IKanji[]>([]);
+    totalRecords = 0;
+    page = 0;
+    perPage = 5;
 
-    radical!: IKanji | undefined;
+    selectedKanji: IKanji[] | null = null;
+    showTable = true;
+    isCrud = false;
 
-    selectedKanji!: IKanji[] | null;
+    readonly statuses = [
+        { label: 'ACTIVE', value: 'instock' },
+        { label: 'ARCHIVED', value: 'lowstock' },
+        { label: 'ON TRASHCAN', value: 'outofstock' }
+    ];
 
-    submitted: boolean = false;
-
-    statuses!: any[];
-    cols!: Column[];
-    showTable: boolean = true;
-    isCrud: boolean = false;
+    readonly cols: Column[] = [
+        { field: 'code', header: 'Code', customExportHeader: 'Product Code' },
+        { field: 'name', header: 'Name' },
+        { field: 'price', header: 'Price' },
+        { field: 'category', header: 'Category' }
+    ];
 
     constructor(
         private kanjiService: KanjiService,
@@ -182,64 +193,75 @@ export class RadicalList implements OnInit {
     ) {}
 
     ngOnInit() {
-        // Set initial state based on the current URL
-        this.showTable = !this.router.url.includes('/alter');
-        this.loadDemoData();
+        this.updateCrudState(this.router.url);
+        // Only fetch if we're not in CRUD mode
+        if (!this.isCrud) {
+            this.fetchRadicals();
+        }
+
         this.router.events.subscribe((event) => {
             if (event instanceof NavigationEnd) {
-                this.showTable = !event.urlAfterRedirects.includes('/alter');
+                const wasCrud = this.isCrud;
+                this.updateCrudState(event.urlAfterRedirects);
+                
+                // Only fetch if we're returning to the list view from CRUD
+                if (wasCrud && !this.isCrud) {
+                    this.fetchRadicals();
+                }
             }
         });
     }
 
-    loadDemoData() {
-        this.kanjiService.getRadicalList().then((data) => {
+    private updateCrudState(url: string) {
+        const isAlterRoute = url.includes('/alter');
+        this.showTable = !isAlterRoute;
+        this.isCrud = isAlterRoute;
+    }
+
+    fetchRadicals() {
+        // Calculate the actual page number (1-based for the API)
+        const pageNumber = Math.floor(this.page / this.perPage) + 1;
+        
+        this.kanjiService.getRadicalList({ 
+            per_page: this.perPage, 
+            page: pageNumber 
+        }).then((data) => {
             if (data.success) {
                 this.kanjiList.set(data.data);
+                this.totalRecords = data.pagination?.totalData ?? data.data.length;
             }
         });
+    }
 
-        this.statuses = [
-            { label: 'ACTIVE', value: 'instock' },
-            { label: 'ARCHIVED', value: 'lowstock' },
-            { label: 'ON TRASHCAN', value: 'outofstock' }
-        ];
-
-        this.cols = [
-            { field: 'code', header: 'Code', customExportHeader: 'Product Code' },
-            { field: 'name', header: 'Name' },
-            { field: 'price', header: 'Price' },
-            { field: 'category', header: 'Category' }
-        ];
+    onPageChange(event: TablePageEvent) {
+        this.page = event.first ?? 0;  // Keep the raw first value
+        this.perPage = event.rows ?? this.perPage;
+        this.fetchRadicals();
     }
 
     onGlobalFilter(table: Table, event: Event) {
         table.filterGlobal((event.target as HTMLInputElement).value, 'contains');
     }
 
-    openNew() {
-        this.isCrud = !this.isCrud;
-        if (this.isCrud) {
+    onNewOrBack() {
+        if (!this.isCrud) {
             this.router.navigate(['/pages/radical/alter']);
         } else {
             this.location.back();
         }
     }
 
-    editProduct(kanji: IKanji) {
-        this.isCrud = !this.isCrud;
-        if (this.isCrud) {
+    onEdit(kanji: IKanji) {
+        if (!this.isCrud) {
             this.router.navigate(['/pages/radical/alter'], {
-                queryParams: {
-                    char: kanji.char
-                }
+                queryParams: { char: kanji.char }
             });
         } else {
             this.location.back();
         }
     }
 
-    deleteSelectedProducts() {
+    onDeleteSelected() {
         this.confirmationService.confirm({
             message: 'Are you sure you want to delete the selected products?',
             header: 'Confirm',
@@ -259,18 +281,13 @@ export class RadicalList implements OnInit {
         });
     }
 
-    hideDialog() {
-        this.submitted = false;
-    }
-
-    deleteProduct(product: IRadical) {
+    onDelete(product: IRadical) {
         this.confirmationService.confirm({
             message: 'Are you sure you want to delete ' + product.char + '?',
             header: 'Confirm',
             icon: 'pi pi-exclamation-triangle',
             accept: () => {
                 this.kanjiList.set(this.kanjiList().filter((val) => val.char !== product.char));
-                this.radical = undefined;
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Successful',
@@ -279,9 +296,5 @@ export class RadicalList implements OnInit {
                 });
             }
         });
-    }
-
-    saveProduct() {
-        this.submitted = true;
     }
 }

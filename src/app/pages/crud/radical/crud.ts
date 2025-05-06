@@ -1,7 +1,7 @@
 import { CommonModule, Location } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { InputTextModule } from 'primeng/inputtext';
@@ -26,12 +26,14 @@ import { MessageService } from 'primeng/api';
         TextareaModule,
         EditorModule,
         FormsModule,
-        Listbox
+        Listbox,
+        ToastModule
     ],
     standalone: true,
     providers: [MessageService],
     template: `
         <div class="p-3 bg-white mb-6">
+            <p-toast />
             <div class="my-3 flex flex-col">
                 <p class="font-semibold text-xl">Char</p>
                 <input
@@ -176,6 +178,7 @@ export class RadicalCrud implements OnInit {
 
     constructor(
         private route: ActivatedRoute,
+        private router: Router,
         private kanjiService: KanjiService,
         private messageService: MessageService,
         private location: Location
@@ -218,7 +221,6 @@ export class RadicalCrud implements OnInit {
     }
     addMoreKanji() {
         if (this.selectedKanji != undefined) {
-            console.log(this.selectedKanji)
             this.kanji.push(this.selectedKanji);
             this.selectedKanji = undefined;
             this.listKanji = [];
@@ -239,13 +241,11 @@ export class RadicalCrud implements OnInit {
         };
         let resp = await this.kanjiService.addRadical(payload);
         if (resp.success) {
-            this.messageService.add({
-                severity: 'success',
-                summary: 'Success',
-                detail: 'Data Created',
-                life: 3000
+            this.router.navigate(['/pages/radical'], {
+                state: {
+                    message: resp.message
+                }
             });
-            this.goBack();
         } else {
             this.messageService.add({
                 severity: 'error',

@@ -27,9 +27,17 @@ export class KanjiService {
         return result ?? { success: 'false', message: 'something went wrong', data: null };
     }
 
-    async getRadicalList(): Promise<IResponseKanjiList> {
+    async getRadicalList(payload: { per_page: number; page: number }): Promise<IResponseKanjiList> {
         const url = `${environment.apiBaseUrl}${HOST.LESSON.RADICAL.LIST}`;
-        const result = await firstValueFrom(this.http.get<IResponseKanjiList | undefined>(url));
+        // Ensure page number is positive
+        const params = {
+            per_page: payload.per_page,
+            page: Math.max(1, payload.page)
+        };
+        
+        const result = await firstValueFrom(
+            this.http.get<IResponseKanjiList | undefined>(url, { params })
+        );
         return result ?? { success: 'false', message: 'something went wrong', data: [] };
     }
 
