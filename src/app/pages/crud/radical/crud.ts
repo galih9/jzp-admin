@@ -145,8 +145,8 @@ import { MessageService } from 'primeng/api';
                     (onClick)="goBack()"
                 />
                 <p-button
-                    label="Add"
-                    icon="pi pi-plus"
+                    [label]="isEditMode ? 'Update' : 'Create'"
+                    [icon]="isEditMode ? 'pi pi-pencil' : 'pi pi-plus'"
                     fluid
                     severity="primary"
                     class="w-full"
@@ -175,6 +175,7 @@ export class RadicalCrud implements OnInit {
     kanji: IKanji[] = [];
 
     items: any[] = [];
+    isEditMode = false;
 
     constructor(
         private route: ActivatedRoute,
@@ -187,6 +188,7 @@ export class RadicalCrud implements OnInit {
     ngOnInit(): void {
         const char = this.route.snapshot.queryParamMap.get('char');
         if (char) {
+            this.isEditMode = true;
             this.kanjiService.getRadicalDetail(char).then((data) => {
                 if (data.success) {
                     let resp = data.data!;
@@ -196,7 +198,8 @@ export class RadicalCrud implements OnInit {
                         meaningSecondary: resp.meaning_secondary,
                         mnemonic: resp.meaning_mnemonic,
                         meaningHint: resp.meaning_hint,
-                        foundInKanji: []
+                        foundInKanji: [],
+                        lesson_id: resp.lesson_id
                     };
                 }
             });
@@ -239,20 +242,41 @@ export class RadicalCrud implements OnInit {
             meaningHint: this.currentData.meaningHint,
             foundInKanji: this.kanji.map((item) => item.lesson_id ?? '')
         };
-        let resp = await this.kanjiService.addRadical(payload);
-        if (resp.success) {
-            this.router.navigate(['/pages/radical'], {
-                state: {
-                    message: resp.message
-                }
+        if (this.isEditMode) {
+            let resp = await this.kanjiService.editRadical({
+                ...payload,
+                lesson_id: this.currentData.lesson_id
             });
+            if (resp.success) {
+                this.router.navigate(['/pages/radical'], {
+                    state: {
+                        message: resp.message
+                    }
+                });
+            } else {
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: resp.message,
+                    life: 3000
+                });
+            }
         } else {
-            this.messageService.add({
-                severity: 'error',
-                summary: 'Error',
-                detail: resp.message,
-                life: 3000
-            });
+            let resp = await this.kanjiService.addRadical(payload);
+            if (resp.success) {
+                this.router.navigate(['/pages/radical'], {
+                    state: {
+                        message: resp.message
+                    }
+                });
+            } else {
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: resp.message,
+                    life: 3000
+                });
+            }
         }
     }
 }

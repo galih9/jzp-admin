@@ -52,7 +52,8 @@ interface Column {
         IconFieldModule,
         ConfirmDialogModule,
         StyleClassModule,
-        RouterModule
+        RouterModule,
+        ConfirmDialogModule
     ],
     template: `
         <div class="overflow-hidden">
@@ -66,7 +67,7 @@ interface Column {
                         (onClick)="onNewOrBack()"
                     />
                     <p-button
-                        severity="secondary"
+                        severity="primary"
                         label="Delete"
                         icon="pi pi-trash"
                         outlined
@@ -107,8 +108,9 @@ interface Column {
                         <input
                             pInputText
                             type="text"
-                            (input)="onGlobalFilter(dt, $event)"
-                            placeholder="Search..."
+                            [(ngModel)]="filterText"
+                            placeholder="Search globally"
+                            (keyup.enter)="onGlobalFilter()"
                         />
                     </p-iconfield>
                 </div>
@@ -158,6 +160,8 @@ interface Column {
                 </tr>
             </ng-template>
         </p-table>
+
+        <p-confirmdialog [style]="{ width: '450px' }" />
     `,
     providers: [MessageService, KanjiService, ConfirmationService]
 })
@@ -170,6 +174,8 @@ export class RadicalList implements OnInit {
     selectedKanji: IKanji[] | null = null;
     showTable = true;
     isCrud = false;
+
+    filterText = '';
 
     readonly statuses = [
         { label: 'ACTIVE', value: 'instock' },
@@ -203,7 +209,7 @@ export class RadicalList implements OnInit {
             if (event instanceof NavigationEnd) {
                 const wasCrud = this.isCrud;
                 this.updateCrudState(event.urlAfterRedirects);
-                
+
                 // Only fetch if we're returning to the list view from CRUD
                 if (wasCrud && !this.isCrud) {
                     this.fetchRadicals();
@@ -219,28 +225,40 @@ export class RadicalList implements OnInit {
     }
 
     fetchRadicals() {
-        // Calculate the actual page number (1-based for the API)
         const pageNumber = Math.floor(this.page / this.perPage) + 1;
-        
-        this.kanjiService.getRadicalList({ 
-            per_page: this.perPage, 
-            page: pageNumber 
-        }).then((data) => {
-            if (data.success) {
-                this.kanjiList.set(data.data);
-                this.totalRecords = data.pagination?.totalData ?? data.data.length;
-            }
-        });
+
+        this.kanjiService
+            .getRadicalList({
+                per_page: this.perPage,
+                page: pageNumber
+            })
+            .then((data) => {
+                if (data.success) {
+                    this.kanjiList.set(data.data);
+                    this.totalRecords = data.pagination?.totalData ?? data.data.length;
+                }
+            });
     }
 
     onPageChange(event: TablePageEvent) {
-        this.page = event.first ?? 0;  // Keep the raw first value
+        this.page = event.first ?? 0; // Keep the raw first value
         this.perPage = event.rows ?? this.perPage;
         this.fetchRadicals();
     }
 
-    onGlobalFilter(table: Table, event: Event) {
-        table.filterGlobal((event.target as HTMLInputElement).value, 'contains');
+    onGlobalFilter() {
+        this.kanjiService
+            .getRadicalList({
+                per_page: this.perPage,
+                page: 1,
+                char: this.filterText
+            })
+            .then((data) => {
+                if (data.success) {
+                    this.kanjiList.set(data.data);
+                    this.totalRecords = data.pagination?.totalData ?? data.data.length;
+                }
+            });
     }
 
     onNewOrBack() {
@@ -254,46 +272,83 @@ export class RadicalList implements OnInit {
     onEdit(kanji: IKanji) {
         if (!this.isCrud) {
             this.router.navigate(['/pages/radical/alter'], {
-                queryParams: { char: kanji.char }
+                queryParams: { char: kanji.char },
+                state: {
+                    mode: 'edit'
+                }
             });
         } else {
             this.location.back();
         }
     }
 
-    onDeleteSelected() {
+    async onDeleteSelected() {
         this.confirmationService.confirm({
-            message: 'Are you sure you want to delete the selected products?',
+            message: 'Are you sure you want to delete the selected radicals?',
             header: 'Confirm',
             icon: 'pi pi-exclamation-triangle',
-            accept: () => {
-                this.kanjiList.set(
-                    this.kanjiList().filter((val) => !this.selectedKanji?.includes(val))
-                );
-                this.selectedKanji = null;
-                this.messageService.add({
-                    severity: 'success',
-                    summary: 'Successful',
-                    detail: 'Products Deleted',
-                    life: 3000
-                });
+            accept: async () => {
+                if (!this.selectedKanji) return;
+
+                try {
+                    for (const radical of this.selectedKanji) {
+                        const result = await this.kanjiService.deleteRadical(
+                            radical.lesson_id ?? ''
+                        );
+                        if (!result.success) {
+                            throw new Error(result.message);
+                        }
+                    }
+
+                    this.messageService.add({
+                        severity: 'success',
+                        summary: 'Successful',
+                        detail: 'Radicals Deleted',
+                        life: 3000
+                    });
+                    this.selectedKanji = null;
+                    this.fetchRadicals();
+                } catch (error) {
+                    this.messageService.add({
+                        severity: 'error',
+                        summary: 'Error',
+                        detail:
+                            error instanceof Error ? error.message : 'Failed to delete radicals',
+                        life: 3000
+                    });
+                }
             }
         });
     }
 
-    onDelete(product: IRadical) {
+    onDelete(item: IKanji) {
         this.confirmationService.confirm({
-            message: 'Are you sure you want to delete ' + product.char + '?',
+            message:
+                'Are you sure you want to delete ' + item.char + ' - ' + item.meaning_primary + '?',
             header: 'Confirm',
             icon: 'pi pi-exclamation-triangle',
-            accept: () => {
-                this.kanjiList.set(this.kanjiList().filter((val) => val.char !== product.char));
-                this.messageService.add({
-                    severity: 'success',
-                    summary: 'Successful',
-                    detail: 'Product Deleted',
-                    life: 3000
-                });
+            accept: async () => {
+                try {
+                    const result = await this.kanjiService.deleteRadical(item.lesson_id ?? '');
+                    if (!result.success) {
+                        throw new Error(result.message);
+                    }
+
+                    this.messageService.add({
+                        severity: 'success',
+                        summary: 'Successful',
+                        detail: 'Radical Deleted',
+                        life: 3000
+                    });
+                    this.fetchRadicals();
+                } catch (error) {
+                    this.messageService.add({
+                        severity: 'error',
+                        summary: 'Error',
+                        detail: error instanceof Error ? error.message : 'Failed to delete radical',
+                        life: 3000
+                    });
+                }
             }
         });
     }

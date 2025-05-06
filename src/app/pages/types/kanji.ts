@@ -38,6 +38,7 @@ export interface IRadicalDetail extends IRadical {
     mnemonic: string;
     meaningHint: string;
     foundInKanji: IKanji[];
+    lesson_id?: string;
 }
 
 export interface IPayloadAddRadical {
@@ -46,6 +47,7 @@ export interface IPayloadAddRadical {
     meaningMnemonic: string;
     meaningHint: string;
     foundInKanji: string[];
+    lesson_id?: string;
 }
 
 export interface IVocab {
