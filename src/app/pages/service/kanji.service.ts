@@ -26,8 +26,31 @@ export class KanjiService {
         const result = await firstValueFrom(this.http.get<IResponseKanjiDetail | undefined>(url));
         return result ?? { success: 'false', message: 'something went wrong', data: null };
     }
+    async getKanjiListPaginate(payload: {
+        per_page: number;
+        page: number;
+        char?: string;
+    }): Promise<IResponseKanjiList> {
+        const url = `${environment.apiBaseUrl}${HOST.LESSON.KANJI.LIST}`;
+        // Ensure page number is positive
+        const params = {
+            per_page: payload.per_page,
+            page: Math.max(1, payload.page),
+            char: payload.char ?? ''
+        };
+        const result = await firstValueFrom(
+            this.http.get<IResponseKanjiList | undefined>(url, { params })
+        );
+        return result ?? { success: 'false', message: 'something went wrong', data: [] };
+    }
 
-    async getRadicalList(payload: {
+
+    async searchRadical(char?: string): Promise<IResponseKanjiList> {
+        const url = `${environment.apiBaseUrl}${HOST.LESSON.RADICAL.LIST}?char=` + char;
+        const result = await firstValueFrom(this.http.get<IResponseKanjiList | undefined>(url));
+        return result ?? { success: 'false', message: 'something went wrong', data: [] };
+    }
+    async getRadicalPaginated(payload: {
         per_page: number;
         page: number;
         char?: string;
@@ -71,6 +94,12 @@ export class KanjiService {
         const result = await firstValueFrom(
             this.http.delete<IBaseResponse | undefined>(url, { params })
         );
+        return result ?? { success: 'false', message: 'something went wrong', data: [] };
+    }
+
+    async getVocabList(): Promise<IResponseKanjiList> {
+        const url = `${environment.apiBaseUrl}${HOST.LESSON.VOCAB.LIST}`;
+        const result = await firstValueFrom(this.http.get<IResponseKanjiList | undefined>(url));
         return result ?? { success: 'false', message: 'something went wrong', data: [] };
     }
 }

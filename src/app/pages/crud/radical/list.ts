@@ -91,7 +91,6 @@ interface Column {
             [totalRecords]="totalRecords"
             [lazy]="true"
             (onPage)="onPageChange($event)"
-            [globalFilterFields]="['name', 'country.name', 'representative.name', 'status']"
             [tableStyle]="{ 'min-width': '75rem' }"
             [(selection)]="selectedKanji"
             [rowHover]="true"
@@ -228,7 +227,7 @@ export class RadicalList implements OnInit {
         const pageNumber = Math.floor(this.page / this.perPage) + 1;
 
         this.kanjiService
-            .getRadicalList({
+            .getRadicalPaginated({
                 per_page: this.perPage,
                 page: pageNumber
             })
@@ -248,7 +247,7 @@ export class RadicalList implements OnInit {
 
     onGlobalFilter() {
         this.kanjiService
-            .getRadicalList({
+            .getRadicalPaginated({
                 per_page: this.perPage,
                 page: 1,
                 char: this.filterText

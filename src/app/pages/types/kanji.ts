@@ -23,6 +23,7 @@ export interface IKanjiDetail extends IKanji {
     onyomi: string[];
     reading_mnemonic: string;
     reading_hint: string;
+    found_in_kanji: IKanji[];
     visuallySimilarKanji: IKanji[];
     radicalsCombination: IRadical[];
     foundInVocab: IVocab[];

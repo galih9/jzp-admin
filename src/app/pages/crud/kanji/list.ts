@@ -1,7 +1,7 @@
-import { Component, OnInit, signal, ViewChild } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { ConfirmationService, MessageService } from 'primeng/api';
-import { Table, TableModule } from 'primeng/table';
-import { CommonModule } from '@angular/common';
+import { Table, TableModule, TablePageEvent } from 'primeng/table';
+import { CommonModule, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { RippleModule } from 'primeng/ripple';
@@ -63,8 +63,21 @@ interface ExportColumn {
         <div class="overflow-hidden">
             <p-toolbar styleClass="mb-6">
                 <ng-template #start>
-                    <p-button label="New" icon="pi pi-plus" severity="secondary" class="mr-2" (onClick)="openNew()" />
-                    <p-button severity="secondary" label="Delete" icon="pi pi-trash" outlined (onClick)="deleteSelectedProducts()" [disabled]="!selectedKanji || !selectedKanji.length" />
+                    <p-button
+                        [label]="isCrud ? 'Back' : 'New'"
+                        [icon]="isCrud ? 'pi pi-times' : 'pi pi-plus'"
+                        severity="secondary"
+                        class="mr-2"
+                        (onClick)="onNewOrBack()"
+                    />
+                    <p-button
+                        severity="secondary"
+                        label="Delete"
+                        icon="pi pi-trash"
+                        outlined
+                        (onClick)="deleteSelectedKanji()"
+                        [disabled]="!selectedKanji || !selectedKanji.length"
+                    />
                 </ng-template>
             </p-toolbar>
         </div>
@@ -76,24 +89,32 @@ interface ExportColumn {
             *ngIf="showTable"
             #dt
             [value]="kanjiList()"
-            [rows]="10"
+            [rows]="perPage"
+            [first]="page"
             [columns]="cols"
             [paginator]="true"
-            [globalFilterFields]="['name', 'country.name', 'representative.name', 'status']"
+            [totalRecords]="totalRecords"
+            [lazy]="true"
+            (onPage)="onPageChange($event)"
             [tableStyle]="{ 'min-width': '75rem' }"
             [(selection)]="selectedKanji"
             [rowHover]="true"
             dataKey="id"
-            currentPageReportTemplate="Showing {first} to {last} of {totalRecords} products"
+            currentPageReportTemplate="Showing {first} to {last} of {totalRecords} radicals"
             [showCurrentPageReport]="true"
-            [rowsPerPageOptions]="[10, 20, 30]"
+            [rowsPerPageOptions]="[5, 10, 20]"
         >
             <ng-template #caption>
                 <div class="flex items-center justify-between">
                     <h5 class="m-0">Manage Kanji</h5>
                     <p-iconfield>
                         <p-inputicon styleClass="pi pi-search" />
-                        <input pInputText type="text" (input)="onGlobalFilter(dt, $event)" placeholder="Search..." />
+                        <input
+                            pInputText
+                            type="text"
+                            (input)="onGlobalFilter(dt, $event)"
+                            placeholder="Search..."
+                        />
                     </p-iconfield>
                 </div>
             </ng-template>
@@ -126,8 +147,23 @@ interface ExportColumn {
                     <td style="min-width: 8rem">{{ kanji.hiragana }}</td>
                     <td>{{ kanji.meaning_primary }}</td>
                     <td>
-                        <p-button icon="pi pi-pencil" class="mr-2" [rounded]="true" [outlined]="true" (click)="editProduct(kanji)" pStyleClass=".boxmain" leaveActiveClass="hidden" leaveToClass="animate-slideup animate-duration-500 " />
-                        <p-button icon="pi pi-trash" severity="danger" [rounded]="true" [outlined]="true" (click)="deleteProduct(kanji)" />
+                        <p-button
+                            icon="pi pi-pencil"
+                            class="mr-2"
+                            [rounded]="true"
+                            [outlined]="true"
+                            (click)="editProduct(kanji)"
+                            pStyleClass=".boxmain"
+                            leaveActiveClass="hidden"
+                            leaveToClass="animate-slideup animate-duration-500 "
+                        />
+                        <p-button
+                            icon="pi pi-trash"
+                            severity="danger"
+                            [rounded]="true"
+                            [outlined]="true"
+                            (click)="deleteProduct(kanji)"
+                        />
                     </td>
                 </tr>
             </ng-template>
@@ -137,6 +173,9 @@ interface ExportColumn {
 })
 export class KanjiList implements OnInit {
     kanjiList = signal<IKanji[]>([]);
+    totalRecords = 0;
+    page = 0;
+    perPage = 5;
 
     kanji: IKanji | undefined;
 
@@ -146,46 +185,74 @@ export class KanjiList implements OnInit {
 
     cols!: Column[];
     showTable: boolean = true;
+    isCrud = false;
 
     constructor(
         private kanjiService: KanjiService,
         private messageService: MessageService,
         private confirmationService: ConfirmationService,
-        private router: Router
+        private router: Router,
+        private location: Location
     ) {}
 
     ngOnInit() {
-        // Set initial state based on the current URL
-        this.showTable = !this.router.url.includes('/alter');
-        this.loadDemoData();
+        this.updateCrudState(this.router.url);
+        // Only fetch if we're not in CRUD mode
+        if (!this.isCrud) {
+            this.fetchKanji();
+        }
+
         this.router.events.subscribe((event) => {
             if (event instanceof NavigationEnd) {
-                this.showTable = !event.urlAfterRedirects.includes('/alter');
+                const wasCrud = this.isCrud;
+                this.updateCrudState(event.urlAfterRedirects);
+
+                // Only fetch if we're returning to the list view from CRUD
+                if (wasCrud && !this.isCrud) {
+                    this.fetchKanji();
+                }
             }
         });
     }
 
-    loadDemoData() {
-        this.kanjiService.getKanjiList().then((data) => {
-            if (data.success) {
-                this.kanjiList.set(data.data);
-            }
-        });
+    fetchKanji() {
+        const pageNumber = Math.floor(this.page / this.perPage) + 1;
 
-        this.cols = [
-            { field: 'code', header: 'Code', customExportHeader: 'Product Code' },
-            { field: 'name', header: 'Name' },
-            { field: 'price', header: 'Price' },
-            { field: 'category', header: 'Category' }
-        ];
+        this.kanjiService
+            .getKanjiListPaginate({
+                per_page: this.perPage,
+                page: pageNumber
+            })
+            .then((data) => {
+                if (data.success) {
+                    this.kanjiList.set(data.data);
+                    this.totalRecords = data.pagination?.totalData ?? data.data.length;
+                }
+            });
+    }
+
+    private updateCrudState(url: string) {
+        const isAlterRoute = url.includes('/alter');
+        this.showTable = !isAlterRoute;
+        this.isCrud = isAlterRoute;
+    }
+
+    onPageChange(event: TablePageEvent) {
+        this.page = event.first ?? 0; // Keep the raw first value
+        this.perPage = event.rows ?? this.perPage;
+        this.fetchKanji();
     }
 
     onGlobalFilter(table: Table, event: Event) {
         table.filterGlobal((event.target as HTMLInputElement).value, 'contains');
     }
 
-    openNew() {
-        this.router.navigate(['/pages/kanji/alter']);
+    onNewOrBack() {
+        if (!this.isCrud) {
+            this.router.navigate(['/pages/kanji/alter']);
+        } else {
+            this.location.back();
+        }
     }
 
     editProduct(kanji: IKanji) {
@@ -196,20 +263,41 @@ export class KanjiList implements OnInit {
         });
     }
 
-    deleteSelectedProducts() {
+    deleteSelectedKanji() {
         this.confirmationService.confirm({
-            message: 'Are you sure you want to delete the selected products?',
+            message: 'Are you sure you want to delete the selected radicals?',
             header: 'Confirm',
             icon: 'pi pi-exclamation-triangle',
-            accept: () => {
-                this.kanjiList.set(this.kanjiList().filter((val) => !this.selectedKanji?.includes(val)));
-                this.selectedKanji = null;
-                this.messageService.add({
-                    severity: 'success',
-                    summary: 'Successful',
-                    detail: 'Products Deleted',
-                    life: 3000
-                });
+            accept: async () => {
+                if (!this.selectedKanji) return;
+
+                try {
+                    for (const radical of this.selectedKanji) {
+                        const result = await this.kanjiService.deleteRadical(
+                            radical.lesson_id ?? ''
+                        );
+                        if (!result.success) {
+                            throw new Error(result.message);
+                        }
+                    }
+
+                    this.messageService.add({
+                        severity: 'success',
+                        summary: 'Successful',
+                        detail: 'Radicals Deleted',
+                        life: 3000
+                    });
+                    this.selectedKanji = null;
+                    this.fetchKanji();
+                } catch (error) {
+                    this.messageService.add({
+                        severity: 'error',
+                        summary: 'Error',
+                        detail:
+                            error instanceof Error ? error.message : 'Failed to delete radicals',
+                        life: 3000
+                    });
+                }
             }
         });
     }
@@ -218,13 +306,12 @@ export class KanjiList implements OnInit {
         this.submitted = false;
     }
 
-    deleteProduct(product: IKanji) {
+    deleteProduct(kanji: IKanji) {
         this.confirmationService.confirm({
-            message: 'Are you sure you want to delete ' + product.char + '?',
+            message: 'Are you sure you want to delete ' + kanji.char + '?',
             header: 'Confirm',
             icon: 'pi pi-exclamation-triangle',
             accept: () => {
-                this.kanjiList.set(this.kanjiList().filter((val) => val.char !== product.char));
                 this.kanji = undefined;
                 this.messageService.add({
                     severity: 'success',

@@ -12,6 +12,8 @@ import { TextareaModule } from 'primeng/textarea';
 import { IKanji, IKanjiDetail, IRadical, IVocab } from '../../types/kanji';
 import { KanjiService } from '../../service/kanji.service';
 import { EditorModule } from 'primeng/editor';
+import { ListboxModule } from 'primeng/listbox';
+import { SelectModule } from 'primeng/select';
 
 @Component({
     selector: 'k-crud',
@@ -25,7 +27,9 @@ import { EditorModule } from 'primeng/editor';
         FormsModule,
         TextareaModule,
         AutoCompleteModule,
-        EditorModule
+        EditorModule,
+        ListboxModule,
+        SelectModule
     ],
     standalone: true,
     template: `
@@ -120,6 +124,24 @@ import { EditorModule } from 'primeng/editor';
                     (onClick)="addMore()"
                 />
             </div>
+
+            <div class="my-3 flex flex-col">
+                <p class="font-semibold text-xl">Pick Primary Reading</p>
+                <p-select
+                    [options]="groupedReading"
+                    [(ngModel)]="selectedPrimaryReading"
+                    placeholder="Select a City"
+                    [group]="true"
+                    class="w-full md:w-56"
+                >
+                    <ng-template let-group #group>
+                        <div class="flex items-center">
+                            <span>{{ group.label }}</span>
+                        </div>
+                    </ng-template>
+                </p-select>
+            </div>
+
             <div class="my-3 flex flex-col">
                 <p class="font-semibold text-xl">Reading Mnemonic</p>
                 <p-editor
@@ -140,13 +162,21 @@ import { EditorModule } from 'primeng/editor';
 
             <div class="my-3 flex flex-col">
                 <p class="font-semibold text-xl">Radical Combination List</p>
-                <div class="mb-3 flex gap-x-3">
-                    <p-autocomplete
-                        [(ngModel)]="localForm.autoRadical"
-                        [suggestions]="listRadical"
-                        (completeMethod)="search($event)"
-                    />
 
+                <div class="mb-3 flex gap-x-3">
+                    <input
+                        pInputText
+                        type="text"
+                        placeholder="Default"
+                        [(ngModel)]="localForm.autoRadical"
+                    />
+                    <p-button
+                        label="Search"
+                        icon="pi pi-search"
+                        severity="secondary"
+                        class="mr-2"
+                        (onClick)="findRadical()"
+                    />
                     <p-button
                         label="Add"
                         icon="pi pi-plus"
@@ -155,6 +185,19 @@ import { EditorModule } from 'primeng/editor';
                         (onClick)="addMoreRadical()"
                     />
                 </div>
+                <p-listbox
+                    *ngIf="showOptionRadical"
+                    [options]="listRadical"
+                    [(ngModel)]="selectedRadical"
+                    optionLabel="name"
+                    class="w-full md:w-56 mb-3"
+                >
+                    <ng-template #item let-listRadical>
+                        <div class="flex items-center gap-2">
+                            <div>{{ listRadical.char }}</div>
+                        </div>
+                    </ng-template>
+                </p-listbox>
                 <p-table [value]="radical" showGridlines [tableStyle]="{ 'min-width': '50rem' }">
                     <ng-template pTemplate="header">
                         <tr>
@@ -167,7 +210,7 @@ import { EditorModule } from 'primeng/editor';
                     <ng-template pTemplate="body" let-radical>
                         <tr>
                             <td>{{ radical.char }}</td>
-                            <td>{{ radical.meaningPrimary }}</td>
+                            <td>{{ radical.meaning_primary }}</td>
                             <td>
                                 <p-button
                                     icon="pi pi-pencil"
@@ -198,12 +241,19 @@ import { EditorModule } from 'primeng/editor';
             <div class="my-3 flex flex-col">
                 <p class="font-semibold text-xl">Visually Simillar Kanji List</p>
                 <div class="mb-3 flex gap-x-3">
-                    <p-autocomplete
+                    <input
+                        pInputText
+                        type="text"
+                        placeholder="Default"
                         [(ngModel)]="localForm.autoKanji"
-                        [suggestions]="listKanji"
-                        (completeMethod)="search($event)"
                     />
-
+                    <p-button
+                        label="Search"
+                        icon="pi pi-search"
+                        severity="secondary"
+                        class="mr-2"
+                        (onClick)="findKanji()"
+                    />
                     <p-button
                         label="Add"
                         icon="pi pi-plus"
@@ -212,6 +262,19 @@ import { EditorModule } from 'primeng/editor';
                         (onClick)="addMoreKanji()"
                     />
                 </div>
+                <p-listbox
+                    *ngIf="showOption"
+                    [options]="listKanji"
+                    [(ngModel)]="selectedKanji"
+                    optionLabel="name"
+                    class="w-full md:w-56 mb-3"
+                >
+                    <ng-template #item let-listKanji>
+                        <div class="flex items-center gap-2">
+                            <div>{{ listKanji.char }}</div>
+                        </div>
+                    </ng-template>
+                </p-listbox>
                 <p-table [value]="kanji" showGridlines [tableStyle]="{ 'min-width': '50rem' }">
                     <ng-template pTemplate="header">
                         <tr>
@@ -225,7 +288,7 @@ import { EditorModule } from 'primeng/editor';
                     <ng-template pTemplate="body" let-kanji>
                         <tr>
                             <td>{{ kanji.char }}</td>
-                            <td>{{ kanji.meaningPrimary }}</td>
+                            <td>{{ kanji.meaning_primary }}</td>
                             <td>{{ kanji.hiragana }}</td>
                             <td>
                                 <p-button
@@ -256,21 +319,6 @@ import { EditorModule } from 'primeng/editor';
             </div>
             <div class="my-3 flex flex-col">
                 <p class="font-semibold text-xl">Found In Vocab List</p>
-                <div class="mb-3 flex gap-x-3">
-                    <p-autocomplete
-                        [(ngModel)]="localForm.autoVocab"
-                        [suggestions]="listVocab"
-                        (completeMethod)="search($event)"
-                    />
-
-                    <p-button
-                        label="Add"
-                        icon="pi pi-plus"
-                        severity="secondary"
-                        class="mr-2"
-                        (onClick)="addMoreVocab()"
-                    />
-                </div>
                 <p-table [value]="vocab" showGridlines [tableStyle]="{ 'min-width': '50rem' }">
                     <ng-template pTemplate="header">
                         <tr>
@@ -284,7 +332,7 @@ import { EditorModule } from 'primeng/editor';
                     <ng-template pTemplate="body" let-vocab>
                         <tr>
                             <td>{{ vocab.char }}</td>
-                            <td>{{ vocab.meaningPrimary }}</td>
+                            <td>{{ vocab.meaning_primary }}</td>
                             <td>{{ vocab.hiragana }}</td>
                             <td>
                                 <p-button
@@ -342,14 +390,24 @@ export class KanjiCrud implements OnInit {
         autoVocab: ''
     };
 
-    listKanji = [];
-    listRadical = [];
+    groupedReading: { label: string; items: { label: string; value: string }[] }[] = [];
+    selectedPrimaryReading = '';
+
+    listKanji: IKanji[] = [];
+    selectedKanji: IKanji | undefined;
+    showOption: boolean = false;
+    kanji: IKanji[] = [];
+
+    listRadical: IKanji[] = [];
+    selectedRadical: IRadical | undefined;
+    showOptionRadical: boolean = false;
+    radicals: IKanji[] = [];
+
     listVocab = [];
 
     secondaryMeaning = [{ value: '', id: 0 }];
     onyomiReading = [{ value: '', id: 0 }];
     kunyomiReading = [{ value: '', id: 0 }];
-    kanji: IKanji[] = [];
     radical: IRadical[] = [];
     vocab: IVocab[] = [];
     items: any[] = [];
@@ -375,6 +433,7 @@ export class KanjiCrud implements OnInit {
             radicalsCombination: [],
             visuallySimilarKanji: [],
             foundInVocab: [],
+            found_in_kanji: []
         };
         const char = this.route.snapshot.queryParamMap.get('char');
         if (char) {
@@ -388,18 +447,31 @@ export class KanjiCrud implements OnInit {
                             this.secondaryMeaning.push({ value: element, id: i });
                         }
                     }
+                    this.groupedReading = [];
                     if (resp.onyomi) {
                         this.onyomiReading = [];
+                        let item: {
+                            label: string;
+                            value: string;
+                        }[] = [];
                         for (let i = 0; i < resp.onyomi.length; i++) {
                             const element = resp.onyomi[i];
                             this.onyomiReading.push({ value: element, id: i });
                         }
+                        this.groupedReading.push({ label: 'Onyomi', items: item });
                     }
                     if (resp.kunyomi) {
                         this.kunyomiReading = [];
                         for (let i = 0; i < resp.kunyomi.length; i++) {
                             const element = resp.kunyomi[i];
                             this.kunyomiReading.push({ value: element, id: i });
+                        }
+                    }
+                    if (resp.found_in_kanji) {
+                        this.kanji = [];
+                        for (let i = 0; i < resp.found_in_kanji.length; i++) {
+                            const element = resp.found_in_kanji[i];
+                            this.kanji.push(element);
                         }
                     }
                     this.currentData = {
@@ -414,6 +486,7 @@ export class KanjiCrud implements OnInit {
                         reading_hint: resp.reading_hint,
                         hiragana: resp.hiragana,
                         radicalsCombination: [],
+                        found_in_kanji: [],
                         visuallySimilarKanji: [],
                         foundInVocab: []
                     };
@@ -422,9 +495,40 @@ export class KanjiCrud implements OnInit {
         }
     }
 
-    search(event: AutoCompleteCompleteEvent) {
-        this.items = [...Array(10).keys()].map((item) => event.query + '-' + item);
+    async findRadical() {
+        this.showOptionRadical = !this.showOptionRadical;
+        let resp = await this.kanjiService.searchRadical(
+            this.localForm.autoRadical == '' ? '' : this.localForm.autoRadical
+        );
+        if (resp.success && Array.isArray(resp.data)) {
+            this.listRadical = resp.data.map((item) => ({
+                char: item.char,
+                meaning_primary: item.meaning_primary,
+                hiragana: item.hiragana,
+                lesson_id: item.lesson_id
+            }));
+        } else {
+            this.listRadical = [];
+        }
     }
+
+    async findKanji() {
+        this.showOption = !this.showOption;
+        let resp = await this.kanjiService.searchKanjiList(
+            this.localForm.autoKanji == '' ? '' : this.localForm.autoKanji
+        );
+        if (resp.success && Array.isArray(resp.data)) {
+            this.listKanji = resp.data.map((item) => ({
+                char: item.char,
+                meaning_primary: item.meaning_primary,
+                hiragana: item.hiragana,
+                lesson_id: item.lesson_id
+            }));
+        } else {
+            this.listKanji = [];
+        }
+    }
+
     removeItem(index: number) {
         this.secondaryMeaning = this.secondaryMeaning.filter((item) => item.id !== index);
     }
@@ -434,10 +538,12 @@ export class KanjiCrud implements OnInit {
         this.secondaryMeaning.push({ value: '', id: newId });
     }
     addMoreRadical() {
-        this.radical.push({
-            char: '大',
-            meaningPrimary: 'big'
-        });
+        if (this.selectedRadical != undefined) {
+            this.radical.push(this.selectedRadical);
+            this.selectedRadical = undefined;
+            this.listRadical = [];
+            this.showOptionRadical = false;
+        }
     }
     addMoreVocab() {
         this.vocab.push({
@@ -447,11 +553,12 @@ export class KanjiCrud implements OnInit {
         });
     }
     addMoreKanji() {
-        // this.kanji.push({
-        //     char: '生',
-        //     meaning_primary: 'fresh',
-        //     hiragana: 'なま'
-        // });
+        if (this.selectedKanji != undefined) {
+            this.kanji.push(this.selectedKanji);
+            this.selectedKanji = undefined;
+            this.listKanji = [];
+            this.showOption = false;
+        }
     }
     goBack() {
         this.router.navigate(['/pages/kanji']);

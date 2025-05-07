@@ -192,6 +192,13 @@ export class RadicalCrud implements OnInit {
             this.kanjiService.getRadicalDetail(char).then((data) => {
                 if (data.success) {
                     let resp = data.data!;
+                    if (resp.found_in_kanji) {
+                        this.kanji = [];
+                        for (let i = 0; i < resp.found_in_kanji.length; i++) {
+                            const element = resp.found_in_kanji[i];
+                            this.kanji.push(element)
+                        }
+                    }
                     this.currentData = {
                         char: resp.char,
                         meaningPrimary: resp.meaning_primary,
