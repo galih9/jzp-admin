@@ -73,3 +73,33 @@ export interface IVocabDetail extends IVocab {
     contextSentences: ISentence[];
     kanjiComposition: IKanji[];
 }
+export interface IReading {
+    lesson_id: string;
+    type: string;
+    hiragana: string;
+}
+export interface IReadingResponse {
+    reading_id: string;
+    lesson_id: string;
+    hiragana: string;
+    type: string;
+}
+
+export interface IResponseReading extends IBaseResponse {
+    data: IReadingResponse[];
+}
+export interface IPayloadAddKanji {
+    char: string;
+    meaning: string;
+    meaningSecondary: string[];
+    primaryReading: string;
+    meaningMnemonic: string;
+    meaningHint: string;
+    readingOnyomi: string[];
+    readingKunyomi: string[];
+    readingMnemonic: string;
+    readingHint: string;
+    foundInVocab: string[];
+    visuallySimilarKanji: string[];
+    radicalCombination: string[];
+}

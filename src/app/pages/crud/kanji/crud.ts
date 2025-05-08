@@ -9,11 +9,12 @@ import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { InputTextModule } from 'primeng/inputtext';
 import { TableModule } from 'primeng/table';
 import { TextareaModule } from 'primeng/textarea';
-import { IKanji, IKanjiDetail, IRadical, IVocab } from '../../types/kanji';
+import { IKanji, IKanjiDetail, IPayloadAddKanji, IRadical, IVocab } from '../../types/kanji';
 import { KanjiService } from '../../service/kanji.service';
 import { EditorModule } from 'primeng/editor';
 import { ListboxModule } from 'primeng/listbox';
 import { SelectModule } from 'primeng/select';
+import { RadioButton } from 'primeng/radiobutton';
 
 @Component({
     selector: 'k-crud',
@@ -29,7 +30,8 @@ import { SelectModule } from 'primeng/select';
         AutoCompleteModule,
         EditorModule,
         ListboxModule,
-        SelectModule
+        SelectModule,
+        RadioButton
     ],
     standalone: true,
     template: `
@@ -95,16 +97,19 @@ import { SelectModule } from 'primeng/select';
                 <div class="flex flex-col gap-y-3 mb-3">
                     <p-inputgroup *ngFor="let item of onyomiReading">
                         <input pInputText placeholder="Onyomi" [(ngModel)]="item.value" />
-                        <p-inputgroup-addon *ngIf="item.id > 0">
-                            <p-button icon="pi pi-times" (onClick)="removeItem(item.id)" />
+                        <p-inputgroup-addon>
+                            <p-button icon="pi pi-times" (onClick)="removeOnyomi(item.id)" />
                         </p-inputgroup-addon>
                     </p-inputgroup>
+                </div>
+                <div class="flex flex-col gap-y-3 mb-3">
+                    <input pInputText placeholder="Onyomi" [(ngModel)]="readingInputOnyomi" />
                 </div>
                 <p-button
                     label="add more"
                     severity="secondary"
                     class="mr-2"
-                    (onClick)="addMore()"
+                    (onClick)="addMoreOnyomi()"
                 />
             </div>
             <div class="my-3">
@@ -112,34 +117,50 @@ import { SelectModule } from 'primeng/select';
                 <div class="flex flex-col gap-y-3 mb-3">
                     <p-inputgroup *ngFor="let item of kunyomiReading">
                         <input pInputText placeholder="Kunyomi" [(ngModel)]="item.value" />
-                        <p-inputgroup-addon *ngIf="item.id > 0">
-                            <p-button icon="pi pi-times" (onClick)="removeItem(item.id)" />
+                        <p-inputgroup-addon>
+                            <p-button icon="pi pi-times" (onClick)="removeKunyomi(item.id)" />
                         </p-inputgroup-addon>
                     </p-inputgroup>
+                </div>
+                <div class="flex flex-col gap-y-3 mb-3">
+                    <input pInputText placeholder="Onyomi" [(ngModel)]="readingInputKunyomi" />
                 </div>
                 <p-button
                     label="add more"
                     severity="secondary"
                     class="mr-2"
-                    (onClick)="addMore()"
+                    (onClick)="addMoreKunyomi()"
                 />
             </div>
 
             <div class="my-3 flex flex-col">
                 <p class="font-semibold text-xl">Pick Primary Reading</p>
-                <p-select
-                    [options]="groupedReading"
-                    [(ngModel)]="selectedPrimaryReading"
-                    placeholder="Select a City"
-                    [group]="true"
-                    class="w-full md:w-56"
-                >
-                    <ng-template let-group #group>
-                        <div class="flex items-center">
-                            <span>{{ group.label }}</span>
+                <div class="flex flex-row">
+                    <div class="flex flex-col gap-4 w-full">
+                        <p>Onyomi</p>
+                        <div *ngFor="let item of onyomiReading" class="field-checkbox">
+                            <p-radiobutton
+                                [inputId]="item.id.toString()"
+                                name="category"
+                                [value]="item.value"
+                                [(ngModel)]="selectedPrimaryReading"
+                            />
+                            <label [for]="item.id" class="ml-2">{{ item.value }}</label>
                         </div>
-                    </ng-template>
-                </p-select>
+                    </div>
+                    <div class="flex flex-col gap-4 w-full">
+                        <p>Kunyomi</p>
+                        <div *ngFor="let item of kunyomiReading" class="field-checkbox">
+                            <p-radiobutton
+                                [inputId]="item.id.toString()"
+                                name="category"
+                                [value]="item.value"
+                                [(ngModel)]="selectedPrimaryReading"
+                            />
+                            <label [for]="item.id" class="ml-2">{{ item.value }}</label>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="my-3 flex flex-col">
@@ -319,6 +340,41 @@ import { SelectModule } from 'primeng/select';
             </div>
             <div class="my-3 flex flex-col">
                 <p class="font-semibold text-xl">Found In Vocab List</p>
+                <div class="mb-3 flex gap-x-3">
+                    <input
+                        pInputText
+                        type="text"
+                        placeholder="Default"
+                        [(ngModel)]="localForm.autoVocab"
+                    />
+                    <p-button
+                        label="Search"
+                        icon="pi pi-search"
+                        severity="secondary"
+                        class="mr-2"
+                        (onClick)="findVocab()"
+                    />
+                    <p-button
+                        label="Add"
+                        icon="pi pi-plus"
+                        severity="secondary"
+                        class="mr-2"
+                        (onClick)="addMoreVocab()"
+                    />
+                </div>
+                <p-listbox
+                    *ngIf="showOptionVocab"
+                    [options]="listVocab"
+                    [(ngModel)]="selectedVocab"
+                    optionLabel="name"
+                    class="w-full md:w-56 mb-3"
+                >
+                    <ng-template #item let-listVocab>
+                        <div class="flex items-center gap-2">
+                            <div>{{ listVocab.char }}</div>
+                        </div>
+                    </ng-template>
+                </p-listbox>
                 <p-table [value]="vocab" showGridlines [tableStyle]="{ 'min-width': '50rem' }">
                     <ng-template pTemplate="header">
                         <tr>
@@ -376,7 +432,7 @@ import { SelectModule } from 'primeng/select';
                     fluid
                     severity="primary"
                     class="w-full"
-                    (onClick)="goBack()"
+                    (onClick)="goAdd()"
                 />
             </div>
         </div>
@@ -393,24 +449,31 @@ export class KanjiCrud implements OnInit {
     groupedReading: { label: string; items: { label: string; value: string }[] }[] = [];
     selectedPrimaryReading = '';
 
+    readingInputKunyomi = '';
+    readingInputOnyomi = '';
+
     listKanji: IKanji[] = [];
     selectedKanji: IKanji | undefined;
     showOption: boolean = false;
     kanji: IKanji[] = [];
 
     listRadical: IKanji[] = [];
-    selectedRadical: IRadical | undefined;
+    selectedRadical: IKanji | undefined;
     showOptionRadical: boolean = false;
     radicals: IKanji[] = [];
 
-    listVocab = [];
+    listVocab: IKanji[] = [];
+    selectedVocab: IKanji | undefined;
+    showOptionVocab: boolean = false;
+    vocabs: IKanji[] = [];
 
     secondaryMeaning = [{ value: '', id: 0 }];
-    onyomiReading = [{ value: '', id: 0 }];
-    kunyomiReading = [{ value: '', id: 0 }];
-    radical: IRadical[] = [];
-    vocab: IVocab[] = [];
+    onyomiReading: { value: string; id: number }[] = [];
+    kunyomiReading: { value: string; id: number }[] = [];
+    radical: IKanji[] = [];
+    vocab: IKanji[] = [];
     items: any[] = [];
+    isEditMode = false;
 
     constructor(
         private router: Router,
@@ -457,15 +520,22 @@ export class KanjiCrud implements OnInit {
                         for (let i = 0; i < resp.onyomi.length; i++) {
                             const element = resp.onyomi[i];
                             this.onyomiReading.push({ value: element, id: i });
+                            item.push({ value: element, label: element });
                         }
                         this.groupedReading.push({ label: 'Onyomi', items: item });
                     }
                     if (resp.kunyomi) {
                         this.kunyomiReading = [];
+                        let item: {
+                            label: string;
+                            value: string;
+                        }[] = [];
                         for (let i = 0; i < resp.kunyomi.length; i++) {
                             const element = resp.kunyomi[i];
                             this.kunyomiReading.push({ value: element, id: i });
+                            item.push({ value: element, label: element });
                         }
+                        this.groupedReading.push({ label: 'Kunyomi', items: item });
                     }
                     if (resp.found_in_kanji) {
                         this.kanji = [];
@@ -529,6 +599,45 @@ export class KanjiCrud implements OnInit {
         }
     }
 
+    async findVocab() {
+        this.showOptionVocab = !this.showOptionVocab;
+        let resp = await this.kanjiService.searchVocabList(
+            this.localForm.autoVocab == '' ? '' : this.localForm.autoVocab
+        );
+        if (resp.success && Array.isArray(resp.data)) {
+            this.listVocab = resp.data.map((item) => ({
+                char: item.char,
+                meaning_primary: item.meaning_primary,
+                hiragana: item.hiragana,
+                lesson_id: item.lesson_id
+            }));
+        } else {
+            this.listVocab = [];
+        }
+    }
+
+    addMoreOnyomi() {
+        let id = this.onyomiReading.length;
+        this.onyomiReading.push({
+            value: this.readingInputOnyomi,
+            id: id
+        });
+        this.readingInputOnyomi = '';
+    }
+    addMoreKunyomi() {
+        let id = this.kunyomiReading.length;
+        this.kunyomiReading.push({
+            value: this.readingInputKunyomi,
+            id: id
+        });
+        this.readingInputKunyomi = '';
+    }
+    removeOnyomi(index: number) {
+        this.onyomiReading = this.onyomiReading.filter((item) => item.id !== index);
+    }
+    removeKunyomi(index: number) {
+        this.kunyomiReading = this.kunyomiReading.filter((item) => item.id !== index);
+    }
     removeItem(index: number) {
         this.secondaryMeaning = this.secondaryMeaning.filter((item) => item.id !== index);
     }
@@ -546,11 +655,12 @@ export class KanjiCrud implements OnInit {
         }
     }
     addMoreVocab() {
-        this.vocab.push({
-            char: '力いっぱい',
-            meaningPrimary: "With All One's Strength",
-            hiragana: 'ちからいっぱい'
-        });
+        if (this.selectedVocab != undefined) {
+            this.vocab.push(this.selectedVocab);
+            this.selectedVocab = undefined;
+            this.listVocab = [];
+            this.showOptionVocab = false;
+        }
     }
     addMoreKanji() {
         if (this.selectedKanji != undefined) {
@@ -562,5 +672,81 @@ export class KanjiCrud implements OnInit {
     }
     goBack() {
         this.router.navigate(['/pages/kanji']);
+    }
+    async goAdd() {
+        // secondary meaning
+        let sm: string[] = [];
+        if (this.secondaryMeaning.length > 0) {
+            for (let i = 0; i < this.secondaryMeaning.length; i++) {
+                const element = this.secondaryMeaning[i];
+                sm.push(element.value);
+            }
+        }
+        let o: string[] = [];
+        if (this.onyomiReading.length > 0) {
+            for (let i = 0; i < this.onyomiReading.length; i++) {
+                const element = this.onyomiReading[i];
+                o.push(element.value);
+            }
+        }
+        let k: string[] = [];
+        if (this.kunyomiReading.length > 0) {
+            for (let i = 0; i < this.kunyomiReading.length; i++) {
+                const element = this.kunyomiReading[i];
+                k.push(element.value);
+            }
+        }
+        let fik: string[] = [];
+        if (this.vocab.length > 0) {
+            for (let i = 0; i < this.vocab.length; i++) {
+                const element = this.vocab[i];
+                if (element.lesson_id) {
+                    fik.push(element.lesson_id);
+                }
+            }
+        }
+        let sk: string[] = [];
+        if (this.kanji.length > 0) {
+            for (let i = 0; i < this.kanji.length; i++) {
+                const element = this.kanji[i];
+                if (element.lesson_id) {
+                    sk.push(element.lesson_id);
+                }
+            }
+        }
+        let rc: string[] = [];
+        if (this.radical.length > 0) {
+            for (let i = 0; i < this.radical.length; i++) {
+                const element = this.radical[i];
+                if (element.lesson_id) {
+                    rc.push(element.lesson_id);
+                }
+            }
+        }
+        let payload: IPayloadAddKanji = {
+            char: this.currentData.char,
+            meaning: this.currentData.meaning_primary,
+            meaningSecondary: sm,
+            primaryReading: this.selectedPrimaryReading,
+            meaningMnemonic: this.currentData.meaning_mnemonic,
+            meaningHint: this.currentData.meaning_hint,
+            readingOnyomi: o,
+            readingKunyomi: k,
+            readingMnemonic: this.currentData.reading_mnemonic,
+            readingHint: this.currentData.reading_hint,
+            foundInVocab: fik,
+            visuallySimilarKanji: sk,
+            radicalCombination: rc
+        };
+        let resp = await this.kanjiService.addKanji(payload);
+        if (resp.success) {
+            this.router.navigate(['/pages/kanji'], {
+                state: {
+                    message: resp.message
+                }
+            });
+        } else {
+            console.log(resp);
+        }
     }
 }

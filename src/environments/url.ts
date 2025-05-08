@@ -2,7 +2,8 @@ export const HOST = {
     LESSON: {
         KANJI: {
             LIST: '/lessons/kanji/list',
-            DETAIL: '/lessons/detail/kanji'
+            DETAIL: '/lessons/detail/kanji',
+            ADD: '/lessons/kanji/add',
         },
         RADICAL: {
             LIST: '/lessons/radical/list',
@@ -15,5 +16,11 @@ export const HOST = {
             LIST: '/lessons/vocab/list',
             DETAIL: '/lessons/detail/vocab'
         }
+    },
+    READINGS: {
+        BY_ID: '/lessons/readings/list',
+        ADD: '/lessons/readings/add',
+        EDIT: '/lessons/readings/edit',
+        DELETE: '/lessons/readings/delete'
     }
 };

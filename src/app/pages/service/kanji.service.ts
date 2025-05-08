@@ -1,105 +1,81 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { IPayloadAddRadical, IResponseKanjiDetail, IResponseKanjiList } from '../types/kanji';
-import { environment } from '../../../environments/environment';
-import { firstValueFrom } from 'rxjs';
+import {
+    IPayloadAddKanji,
+    IPayloadAddRadical,
+    IReading,
+    IResponseKanjiDetail,
+    IResponseKanjiList,
+    IResponseReading
+} from '../types/kanji';
 import { HOST } from '../../../environments/url';
-import { IBaseResponse } from '../types/general';
+import { IBaseResponse, PaginationParams } from '../types/general';
+import { BaseApiService } from './core/base-api.service';
 
 @Injectable()
-export class KanjiService {
-    constructor(private http: HttpClient) {}
-
-    async getKanjiList(): Promise<IResponseKanjiList> {
-        const url = `${environment.apiBaseUrl}${HOST.LESSON.KANJI.LIST}`;
-        const result = await firstValueFrom(this.http.get<IResponseKanjiList | undefined>(url));
-        return result ?? { success: 'false', message: 'something went wrong', data: [] };
+export class KanjiService extends BaseApiService {
+    constructor(http: HttpClient) {
+        super(http);
     }
+
+    // Kanji methods
+    async getKanjiList(): Promise<IResponseKanjiList> {
+        return this.request<IResponseKanjiList>('get', HOST.LESSON.KANJI.LIST);
+    }
+
     async searchKanjiList(char?: string): Promise<IResponseKanjiList> {
-        const url = `${environment.apiBaseUrl}${HOST.LESSON.KANJI.LIST}?char=` + char;
-        const result = await firstValueFrom(this.http.get<IResponseKanjiList | undefined>(url));
-        return result ?? { success: 'false', message: 'something went wrong', data: [] };
+        return this.request<IResponseKanjiList>('get', HOST.LESSON.KANJI.LIST, { char });
     }
 
     async getKanjiDetail(char: string): Promise<IResponseKanjiDetail> {
-        const url = `${environment.apiBaseUrl}${HOST.LESSON.KANJI.DETAIL}?char=` + char;
-        const result = await firstValueFrom(this.http.get<IResponseKanjiDetail | undefined>(url));
-        return result ?? { success: 'false', message: 'something went wrong', data: null };
-    }
-    async getKanjiListPaginate(payload: {
-        per_page: number;
-        page: number;
-        char?: string;
-    }): Promise<IResponseKanjiList> {
-        const url = `${environment.apiBaseUrl}${HOST.LESSON.KANJI.LIST}`;
-        // Ensure page number is positive
-        const params = {
-            per_page: payload.per_page,
-            page: Math.max(1, payload.page),
-            char: payload.char ?? ''
-        };
-        const result = await firstValueFrom(
-            this.http.get<IResponseKanjiList | undefined>(url, { params })
-        );
-        return result ?? { success: 'false', message: 'something went wrong', data: [] };
+        return this.request<IResponseKanjiDetail>('get', HOST.LESSON.KANJI.DETAIL, { char });
     }
 
+    async getKanjiListPaginate(params: PaginationParams): Promise<IResponseKanjiList> {
+        return this.request<IResponseKanjiList>('get', HOST.LESSON.KANJI.LIST, {
+            ...params,
+            page: Math.max(1, params.page),
+            char: params.char ?? ''
+        });
+    }
+    async addKanji(payload: IPayloadAddKanji): Promise<IBaseResponse> {
+        return this.request<IBaseResponse>('post', HOST.LESSON.KANJI.ADD, null, payload);
+    }
 
+    // Radical methods
     async searchRadical(char?: string): Promise<IResponseKanjiList> {
-        const url = `${environment.apiBaseUrl}${HOST.LESSON.RADICAL.LIST}?char=` + char;
-        const result = await firstValueFrom(this.http.get<IResponseKanjiList | undefined>(url));
-        return result ?? { success: 'false', message: 'something went wrong', data: [] };
+        return this.request<IResponseKanjiList>('get', HOST.LESSON.RADICAL.LIST, { char });
     }
-    async getRadicalPaginated(payload: {
-        per_page: number;
-        page: number;
-        char?: string;
-    }): Promise<IResponseKanjiList> {
-        const url = `${environment.apiBaseUrl}${HOST.LESSON.RADICAL.LIST}`;
-        // Ensure page number is positive
-        const params = {
-            per_page: payload.per_page,
-            page: Math.max(1, payload.page),
-            char: payload.char ?? ''
-        };
 
-        const result = await firstValueFrom(
-            this.http.get<IResponseKanjiList | undefined>(url, { params })
-        );
-        return result ?? { success: 'false', message: 'something went wrong', data: [] };
+    async getRadicalPaginated(params: PaginationParams): Promise<IResponseKanjiList> {
+        return this.request<IResponseKanjiList>('get', HOST.LESSON.RADICAL.LIST, {
+            ...params,
+            page: Math.max(1, params.page),
+            char: params.char ?? ''
+        });
     }
 
     async getRadicalDetail(char: string): Promise<IResponseKanjiDetail> {
-        const url = `${environment.apiBaseUrl}${HOST.LESSON.RADICAL.DETAIL}?char=` + char;
-        const result = await firstValueFrom(this.http.get<IResponseKanjiDetail | undefined>(url));
-        return result ?? { success: 'false', message: 'something went wrong', data: null };
-    }
-    async addRadical(payload: IPayloadAddRadical): Promise<IBaseResponse> {
-        const url = `${environment.apiBaseUrl}${HOST.LESSON.RADICAL.ADD}`;
-        const result = await firstValueFrom(
-            this.http.post<IBaseResponse | undefined>(url, payload)
-        );
-        return result ?? { success: 'false', message: 'something went wrong', data: [] };
-    }
-    async editRadical(payload: IPayloadAddRadical): Promise<IBaseResponse> {
-        const url = `${environment.apiBaseUrl}${HOST.LESSON.RADICAL.EDIT}`;
-        const result = await firstValueFrom(this.http.put<IBaseResponse | undefined>(url, payload));
-        return result ?? { success: 'false', message: 'something went wrong', data: [] };
-    }
-    async deleteRadical(lesson_id: string): Promise<IBaseResponse> {
-        const url = `${environment.apiBaseUrl}${HOST.LESSON.RADICAL.DELETE}`;
-        const params = {
-            lesson_id: lesson_id
-        };
-        const result = await firstValueFrom(
-            this.http.delete<IBaseResponse | undefined>(url, { params })
-        );
-        return result ?? { success: 'false', message: 'something went wrong', data: [] };
+        return this.request<IResponseKanjiDetail>('get', HOST.LESSON.RADICAL.DETAIL, { char });
     }
 
+    async addRadical(payload: IPayloadAddRadical): Promise<IBaseResponse> {
+        return this.request<IBaseResponse>('post', HOST.LESSON.RADICAL.ADD, null, payload);
+    }
+
+    async editRadical(payload: IPayloadAddRadical): Promise<IBaseResponse> {
+        return this.request<IBaseResponse>('put', HOST.LESSON.RADICAL.EDIT, null, payload);
+    }
+
+    async deleteRadical(lesson_id: string): Promise<IBaseResponse> {
+        return this.request<IBaseResponse>('delete', HOST.LESSON.RADICAL.DELETE, { lesson_id });
+    }
+
+    // Vocab methods
     async getVocabList(): Promise<IResponseKanjiList> {
-        const url = `${environment.apiBaseUrl}${HOST.LESSON.VOCAB.LIST}`;
-        const result = await firstValueFrom(this.http.get<IResponseKanjiList | undefined>(url));
-        return result ?? { success: 'false', message: 'something went wrong', data: [] };
+        return this.request<IResponseKanjiList>('get', HOST.LESSON.VOCAB.LIST);
+    }
+    async searchVocabList(char?: string): Promise<IResponseKanjiList> {
+        return this.request<IResponseKanjiList>('get', HOST.LESSON.VOCAB.LIST, { char });
     }
 }

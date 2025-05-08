@@ -9,3 +9,9 @@ export interface IBaseResponse {
         totalData: number;
     };
 }
+
+export interface PaginationParams {
+    per_page: number;
+    page: number;
+    char?: string;
+}
