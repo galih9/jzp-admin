@@ -3,9 +3,11 @@ import { Injectable } from '@angular/core';
 import {
     IPayloadAddKanji,
     IPayloadAddRadical,
+    IPayloadEditKanji,
     IReading,
     IResponseKanjiDetail,
     IResponseKanjiList,
+    IResponseRadicalDetail,
     IResponseReading
 } from '../types/kanji';
 import { HOST } from '../../../environments/url';
@@ -41,6 +43,9 @@ export class KanjiService extends BaseApiService {
     async addKanji(payload: IPayloadAddKanji): Promise<IBaseResponse> {
         return this.request<IBaseResponse>('post', HOST.LESSON.KANJI.ADD, null, payload);
     }
+    async updateKanji(payload: IPayloadEditKanji): Promise<IBaseResponse> {
+        return this.request<IBaseResponse>('post', HOST.LESSON.KANJI.EDIT, null, payload);
+    }
 
     // Radical methods
     async searchRadical(char?: string): Promise<IResponseKanjiList> {
@@ -55,8 +60,8 @@ export class KanjiService extends BaseApiService {
         });
     }
 
-    async getRadicalDetail(char: string): Promise<IResponseKanjiDetail> {
-        return this.request<IResponseKanjiDetail>('get', HOST.LESSON.RADICAL.DETAIL, { char });
+    async getRadicalDetail(char: string): Promise<IResponseRadicalDetail> {
+        return this.request<IResponseRadicalDetail>('get', HOST.LESSON.RADICAL.DETAIL, { char });
     }
 
     async addRadical(payload: IPayloadAddRadical): Promise<IBaseResponse> {

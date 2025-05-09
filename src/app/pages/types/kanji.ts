@@ -8,6 +8,10 @@ export interface IResponseKanjiDetail extends IBaseResponse {
     data: IKanjiDetail | null;
 }
 
+export interface IResponseRadicalDetail extends IBaseResponse {
+    data: IRadicalDetail | null;
+}
+
 export interface IKanji {
     lesson_id?: string;
     char: string;
@@ -23,23 +27,22 @@ export interface IKanjiDetail extends IKanji {
     onyomi: string[];
     reading_mnemonic: string;
     reading_hint: string;
-    found_in_kanji: IKanji[];
-    visuallySimilarKanji: IKanji[];
-    radicalsCombination: IRadical[];
-    foundInVocab: IVocab[];
+    hiragana: string;
+    kanji_similar: IKanji[];
+    radical_combinations: IKanji[];
+    found_in_vocab: IKanji[];
 }
 
+
+export interface IRadicalDetail extends IKanji {
+    meaning_secondary: string[];
+    meaning_mnemonic: string;
+    meaning_hint: string;
+    found_in_kanji: IKanji[];
+}
 export interface IRadical {
     char: string;
     meaningPrimary: string;
-}
-
-export interface IRadicalDetail extends IRadical {
-    meaningSecondary: string[];
-    mnemonic: string;
-    meaningHint: string;
-    foundInKanji: IKanji[];
-    lesson_id?: string;
 }
 
 export interface IPayloadAddRadical {
@@ -102,4 +105,8 @@ export interface IPayloadAddKanji {
     foundInVocab: string[];
     visuallySimilarKanji: string[];
     radicalCombination: string[];
+}
+
+export interface IPayloadEditKanji extends IPayloadAddKanji {
+    lesson_id: string;
 }

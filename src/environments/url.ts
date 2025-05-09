@@ -4,6 +4,7 @@ export const HOST = {
             LIST: '/lessons/kanji/list',
             DETAIL: '/lessons/detail/kanji',
             ADD: '/lessons/kanji/add',
+            EDIT: '/lessons/kanji/add'
         },
         RADICAL: {
             LIST: '/lessons/radical/list',

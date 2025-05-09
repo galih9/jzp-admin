@@ -493,10 +493,9 @@ export class KanjiCrud implements OnInit {
             reading_mnemonic: '',
             reading_hint: '',
             hiragana: '',
-            radicalsCombination: [],
-            visuallySimilarKanji: [],
-            foundInVocab: [],
-            found_in_kanji: []
+            radical_combinations: [],
+            kanji_similar: [],
+            found_in_vocab: []
         };
         const char = this.route.snapshot.queryParamMap.get('char');
         if (char) {
@@ -537,10 +536,24 @@ export class KanjiCrud implements OnInit {
                         }
                         this.groupedReading.push({ label: 'Kunyomi', items: item });
                     }
-                    if (resp.found_in_kanji) {
+                    if (resp.radical_combinations) {
+                        this.radical = [];
+                        for (let i = 0; i < resp.radical_combinations.length; i++) {
+                            const element = resp.radical_combinations[i];
+                            this.radical.push(element);
+                        }
+                    }
+                    if (resp.found_in_vocab) {
+                        this.vocab = [];
+                        for (let i = 0; i < resp.found_in_vocab.length; i++) {
+                            const element = resp.found_in_vocab[i];
+                            this.vocab.push(element);
+                        }
+                    }
+                    if (resp.kanji_similar) {
                         this.kanji = [];
-                        for (let i = 0; i < resp.found_in_kanji.length; i++) {
-                            const element = resp.found_in_kanji[i];
+                        for (let i = 0; i < resp.kanji_similar.length; i++) {
+                            const element = resp.kanji_similar[i];
                             this.kanji.push(element);
                         }
                     }
@@ -555,10 +568,9 @@ export class KanjiCrud implements OnInit {
                         reading_mnemonic: resp.reading_mnemonic,
                         reading_hint: resp.reading_hint,
                         hiragana: resp.hiragana,
-                        radicalsCombination: [],
-                        found_in_kanji: [],
-                        visuallySimilarKanji: [],
-                        foundInVocab: []
+                        radical_combinations: [],
+                        found_in_vocab: [],
+                        kanji_similar: []
                     };
                 }
             });
@@ -738,15 +750,16 @@ export class KanjiCrud implements OnInit {
             visuallySimilarKanji: sk,
             radicalCombination: rc
         };
-        let resp = await this.kanjiService.addKanji(payload);
-        if (resp.success) {
-            this.router.navigate(['/pages/kanji'], {
-                state: {
-                    message: resp.message
-                }
-            });
-        } else {
-            console.log(resp);
-        }
+        console.log(payload);
+        // let resp = await this.kanjiService.addKanji(payload);
+        // if (resp.success) {
+        //     this.router.navigate(['/pages/kanji'], {
+        //         state: {
+        //             message: resp.message
+        //         }
+        //     });
+        // } else {
+        //     console.log(resp);
+        // }
     }
 }

@@ -49,12 +49,15 @@ import { MessageService } from 'primeng/api';
                     pInputText
                     type="text"
                     placeholder="Default"
-                    [(ngModel)]="currentData.meaningPrimary"
+                    [(ngModel)]="currentData.meaning_primary"
                 />
             </div>
             <div class="my-3 flex flex-col">
                 <p class="font-semibold text-xl">Meaning Mnemonic</p>
-                <p-editor [(ngModel)]="currentData.mnemonic" [style]="{ height: '100px' }" />
+                <p-editor
+                    [(ngModel)]="currentData.meaning_mnemonic"
+                    [style]="{ height: '100px' }"
+                />
             </div>
             <div class="my-3 flex flex-col">
                 <p class="font-semibold text-xl">Hint Notes</p>
@@ -62,7 +65,7 @@ import { MessageService } from 'primeng/api';
                     rows="5"
                     cols="30"
                     pTextarea
-                    [(ngModel)]="currentData.meaningHint"
+                    [(ngModel)]="currentData.meaning_hint"
                 ></textarea>
             </div>
             <div class="my-3 flex flex-col">
@@ -123,6 +126,7 @@ import { MessageService } from 'primeng/api';
                                     severity="danger"
                                     [rounded]="true"
                                     [outlined]="true"
+                                    (onClick)="deleteKanji(kanji)"
                                 />
                             </td>
                         </tr>
@@ -158,12 +162,13 @@ import { MessageService } from 'primeng/api';
 })
 export class RadicalCrud implements OnInit {
     currentData: IRadicalDetail = {
+        meaning_secondary: [],
+        meaning_mnemonic: '',
+        meaning_hint: '',
+        found_in_kanji: [],
         char: '',
-        meaningPrimary: '',
-        meaningSecondary: [],
-        mnemonic: '',
-        meaningHint: '',
-        foundInKanji: []
+        hiragana: '',
+        meaning_primary: ''
     };
     localForm = {
         autoKanji: ''
@@ -196,16 +201,17 @@ export class RadicalCrud implements OnInit {
                         this.kanji = [];
                         for (let i = 0; i < resp.found_in_kanji.length; i++) {
                             const element = resp.found_in_kanji[i];
-                            this.kanji.push(element)
+                            this.kanji.push(element);
                         }
                     }
                     this.currentData = {
+                        meaning_secondary: resp.meaning_secondary,
+                        meaning_mnemonic: resp.meaning_mnemonic,
+                        meaning_hint: resp.meaning_hint,
+                        found_in_kanji: [],
                         char: resp.char,
-                        meaningPrimary: resp.meaning_primary,
-                        meaningSecondary: resp.meaning_secondary,
-                        mnemonic: resp.meaning_mnemonic,
-                        meaningHint: resp.meaning_hint,
-                        foundInKanji: [],
+                        hiragana: '',
+                        meaning_primary: resp.meaning_primary,
                         lesson_id: resp.lesson_id
                     };
                 }
@@ -237,6 +243,9 @@ export class RadicalCrud implements OnInit {
             this.showOption = false;
         }
     }
+    deleteKanji(item: IKanji) {
+        this.kanji = this.kanji.filter((e) => e.lesson_id != item.lesson_id);
+    }
     goBack() {
         this.location.back();
     }
@@ -244,9 +253,9 @@ export class RadicalCrud implements OnInit {
     async goAdd() {
         let payload: IPayloadAddRadical = {
             char: this.currentData.char,
-            meaning: this.currentData.meaningPrimary,
-            meaningMnemonic: this.currentData.mnemonic,
-            meaningHint: this.currentData.meaningHint,
+            meaning: this.currentData.meaning_primary,
+            meaningMnemonic: this.currentData.meaning_primary,
+            meaningHint: this.currentData.meaning_hint,
             foundInKanji: this.kanji.map((item) => item.lesson_id ?? '')
         };
         if (this.isEditMode) {
