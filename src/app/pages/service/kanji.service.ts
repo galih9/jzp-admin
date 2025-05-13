@@ -8,7 +8,8 @@ import {
     IResponseKanjiDetail,
     IResponseKanjiList,
     IResponseRadicalDetail,
-    IResponseReading
+    IResponseReading,
+    IResponseVocabDetail
 } from '../types/kanji';
 import { HOST } from '../../../environments/url';
 import { IBaseResponse, PaginationParams } from '../types/general';
@@ -80,7 +81,22 @@ export class KanjiService extends BaseApiService {
     async getVocabList(): Promise<IResponseKanjiList> {
         return this.request<IResponseKanjiList>('get', HOST.LESSON.VOCAB.LIST);
     }
+    async getVocabListPaginated(params: PaginationParams): Promise<IResponseKanjiList> {
+        return this.request<IResponseKanjiList>('get', HOST.LESSON.VOCAB.LIST, {
+            ...params,
+            page: Math.max(1, params.page),
+            char: params.char ?? ''
+        });
+    }
     async searchVocabList(char?: string): Promise<IResponseKanjiList> {
         return this.request<IResponseKanjiList>('get', HOST.LESSON.VOCAB.LIST, { char });
     }
+
+    async deleteVocab(lesson_id: string): Promise<IBaseResponse> {
+        return this.request<IBaseResponse>('delete', HOST.LESSON.VOCAB.DELETE, { lesson_id });
+    }
+    async getVocabDetail(char: string): Promise<IResponseVocabDetail> {
+        return this.request<IResponseVocabDetail>('get', HOST.LESSON.VOCAB.DETAIL, { char });
+    }
+
 }

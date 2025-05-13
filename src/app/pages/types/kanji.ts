@@ -57,24 +57,30 @@ export interface IPayloadAddRadical {
 export interface IVocab {
     char: string;
     hiragana: string;
-    meaningPrimary: string;
+    meaning_primary: string;
+    lesson_id?: string;
 }
 
 export interface ISentence {
-    char: string;
+    hiragana: string;
     meaning: string;
 }
 
+export interface IPatterns {
+    hiragana: string;
+    examples: ISentence[];
+}
+
 export interface IVocabDetail extends IVocab {
-    meaningSecondary: string[];
-    explanation: string;
-    explanationHint: string;
-    reading: string;
-    readingExplanation: string;
-    readingExplanationHint: string;
-    contextPattern: ISentence[];
-    contextSentences: ISentence[];
-    kanjiComposition: IKanji[];
+    meaning_secondary: string[];
+    meaning_mnemonic: string;
+    readings: string[];
+    meaning_hint: string;
+    reading_mnemonic: string;
+    reading_hint: string;
+    kanji_composition: IKanji[];
+    sentences: ISentence[];
+    patterns: IPatterns[]
 }
 export interface IReading {
     lesson_id: string;
@@ -109,4 +115,10 @@ export interface IPayloadAddKanji {
 
 export interface IPayloadEditKanji extends IPayloadAddKanji {
     lesson_id: string;
+}
+
+// vocab
+
+export interface IResponseVocabDetail extends IBaseResponse {
+    data: IVocabDetail;
 }

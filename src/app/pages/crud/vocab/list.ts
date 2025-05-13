@@ -1,7 +1,7 @@
-import { Component, OnInit, signal, ViewChild } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { ConfirmationService, MessageService } from 'primeng/api';
-import { Table, TableModule } from 'primeng/table';
-import { CommonModule } from '@angular/common';
+import { TableModule, TablePageEvent } from 'primeng/table';
+import { CommonModule, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { RippleModule } from 'primeng/ripple';
@@ -20,7 +20,8 @@ import { IconFieldModule } from 'primeng/iconfield';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { StyleClassModule } from 'primeng/styleclass';
 import { Router, RouterModule, NavigationEnd } from '@angular/router';
-import { IVocab } from '../../types/kanji';
+import { IKanji } from '../../types/kanji';
+import { KanjiService } from '../../service/kanji.service';
 
 interface Column {
     field: string;
@@ -51,42 +52,65 @@ interface Column {
         IconFieldModule,
         ConfirmDialogModule,
         StyleClassModule,
-        RouterModule
+        RouterModule,
+        ConfirmDialogModule
     ],
     template: `
         <div class="overflow-hidden">
             <p-toolbar styleClass="mb-6">
                 <ng-template #start>
-                    <p-button label="New" icon="pi pi-plus" severity="secondary" class="mr-2" (onClick)="openNew()" />
-                    <p-button severity="secondary" label="Delete" icon="pi pi-trash" outlined (onClick)="deleteSelectedProducts()" [disabled]="!selectedKanji || !selectedKanji.length" />
+                    <p-button
+                        [label]="isCrud ? 'Back' : 'New'"
+                        [icon]="isCrud ? 'pi pi-times' : 'pi pi-plus'"
+                        severity="secondary"
+                        class="mr-2"
+                        (onClick)="onNewOrBack()"
+                    />
+                    <p-button
+                        severity="primary"
+                        label="Delete"
+                        icon="pi pi-trash"
+                        outlined
+                        (onClick)="onDeleteSelected()"
+                        [disabled]="!selectedKanji || !selectedKanji.length"
+                    />
                 </ng-template>
             </p-toolbar>
         </div>
-
+        <p-toast />
         <router-outlet></router-outlet>
 
-        <!-- Hide table if a child route is active -->
-        <p-table *ngIf="showTable"
+        <p-table
+            *ngIf="showTable"
             #dt
             [value]="kanjiList()"
-            [rows]="10"
+            [rows]="perPage"
+            [first]="page"
             [columns]="cols"
             [paginator]="true"
-            [globalFilterFields]="['name', 'country.name', 'representative.name', 'status']"
+            [totalRecords]="totalRecords"
+            [lazy]="true"
+            (onPage)="onPageChange($event)"
             [tableStyle]="{ 'min-width': '75rem' }"
             [(selection)]="selectedKanji"
             [rowHover]="true"
             dataKey="id"
-            currentPageReportTemplate="Showing {first} to {last} of {totalRecords} products"
+            currentPageReportTemplate="Showing {first} to {last} of {totalRecords} vocabs"
             [showCurrentPageReport]="true"
-            [rowsPerPageOptions]="[10, 20, 30]"
+            [rowsPerPageOptions]="[5, 10, 20]"
         >
             <ng-template #caption>
                 <div class="flex items-center justify-between">
-                    <h5 class="m-0">Manage Vocabulary</h5>
+                    <h5 class="m-0">Manage Vocabs</h5>
                     <p-iconfield>
                         <p-inputicon styleClass="pi pi-search" />
-                        <input pInputText type="text" (input)="onGlobalFilter(dt, $event)" placeholder="Search..." />
+                        <input
+                            pInputText
+                            type="text"
+                            [(ngModel)]="filterText"
+                            placeholder="Search globally"
+                            (keyup.enter)="onGlobalFilter()"
+                        />
                     </p-iconfield>
                 </div>
             </ng-template>
@@ -95,17 +119,17 @@ interface Column {
                     <th style="width: 3rem">
                         <p-tableHeaderCheckbox />
                     </th>
-                    <th pSortableColumn="character" style="min-width:16rem">
+                    <th pSortableColumn="char" style="min-width:12rem">
                         Character
-                        <p-sortIcon field="character" />
+                        <p-sortIcon field="char" />
                     </th>
-                    <th pSortableColumn="hiragana" style="min-width: 8rem">
-                        Hiragana
+                    <th pSortableColumn="hiragana" style="min-width:12rem">
+                        Reading
                         <p-sortIcon field="hiragana" />
                     </th>
-                    <th pSortableColumn="meaning" style="min-width:10rem">
-                        Meaning
-                        <p-sortIcon field="meaning" />
+                    <th pSortableColumn="meaning_primary" style="min-width:16rem">
+                        Mnemonic Meaning
+                        <p-sortIcon field="meaning_primary" />
                     </th>
                     <th style="min-width: 12rem">Action</th>
                 </tr>
@@ -115,121 +139,218 @@ interface Column {
                     <td style="width: 3rem">
                         <p-tableCheckbox [value]="kanji" />
                     </td>
-                    <td style="min-width: 12rem">{{ kanji.char }}</td>
-                    <td style="min-width: 16rem">{{ kanji.hiragana }}</td>
-                    <td>{{ kanji.meaningPrimary }}</td>
+                    <td>{{ kanji.char }}</td>
+                    <td>{{ kanji.hiragana }}</td>
+                    <td>{{ kanji.meaning_primary }}</td>
                     <td>
-                        <p-button icon="pi pi-pencil" class="mr-2" [rounded]="true" [outlined]="true" (click)="editProduct()" pStyleClass=".boxmain" leaveActiveClass="hidden" leaveToClass="animate-slideup animate-duration-500 " />
-                        <p-button icon="pi pi-trash" severity="danger" [rounded]="true" [outlined]="true" (click)="deleteProduct(kanji)" />
+                        <p-button
+                            icon="pi pi-pencil"
+                            class="mr-2"
+                            [rounded]="true"
+                            [outlined]="true"
+                            (click)="onEdit(kanji)"
+                            pStyleClass=".boxmain"
+                            leaveActiveClass="hidden"
+                            leaveToClass="animate-slideup animate-duration-500 "
+                        />
+                        <p-button
+                            icon="pi pi-trash"
+                            severity="danger"
+                            [rounded]="true"
+                            [outlined]="true"
+                            (click)="onDelete(kanji)"
+                        />
                     </td>
                 </tr>
             </ng-template>
         </p-table>
+
+        <p-confirmdialog [style]="{ width: '450px' }" />
     `,
-    providers: [MessageService, ConfirmationService]
+    providers: [MessageService, KanjiService, ConfirmationService]
 })
 export class VocabList implements OnInit {
-    kanjiList = signal<IVocab[]>([]);
+    kanjiList = signal<IKanji[]>([]);
+    totalRecords = 0;
+    page = 0;
+    perPage = 5;
 
-    vocab!: IVocab | undefined;
+    selectedKanji: IKanji[] | null = null;
+    showTable = true;
+    isCrud = false;
 
-    selectedKanji!: IVocab[] | null;
+    filterText = '';
 
-    submitted: boolean = false;
+    readonly statuses = [
+        { label: 'ACTIVE', value: 'instock' },
+        { label: 'ARCHIVED', value: 'lowstock' },
+        { label: 'ON TRASHCAN', value: 'outofstock' }
+    ];
 
-    statuses!: any[];
-    cols!: Column[];
-    showTable: boolean = true;
+    readonly cols: Column[] = [
+        { field: 'code', header: 'Code', customExportHeader: 'Product Code' },
+        { field: 'name', header: 'Name' },
+        { field: 'price', header: 'Price' },
+        { field: 'category', header: 'Category' }
+    ];
 
     constructor(
+        private kanjiService: KanjiService,
         private messageService: MessageService,
         private confirmationService: ConfirmationService,
+        private location: Location,
         private router: Router
     ) {}
 
     ngOnInit() {
-        // Set initial state based on the current URL
-        this.showTable = !this.router.url.includes('/alter');
-        this.loadDemoData();
-        this.router.events.subscribe(event => {
+        this.updateCrudState(this.router.url);
+        // Only fetch if we're not in CRUD mode
+        if (!this.isCrud) {
+            this.fetchVocabs();
+        }
+
+        this.router.events.subscribe((event) => {
             if (event instanceof NavigationEnd) {
-                this.showTable = !event.urlAfterRedirects.includes('/alter');
-            }
-        }); 
-    }
+                const wasCrud = this.isCrud;
+                this.updateCrudState(event.urlAfterRedirects);
 
-    loadDemoData() {
-        // this.kanjiService.getKanjiList().then((data) => {
-        //     this.kanjiList.set(data);
-        // });
-
-        this.statuses = [
-            { label: 'ACTIVE', value: 'instock' },
-            { label: 'ARCHIVED', value: 'lowstock' },
-            { label: 'ON TRASHCAN', value: 'outofstock' }
-        ];
-
-        this.cols = [
-            { field: 'code', header: 'Code', customExportHeader: 'Product Code' },
-            { field: 'name', header: 'Name' },
-            { field: 'price', header: 'Price' },
-            { field: 'category', header: 'Category' }
-        ];
-    }
-
-    onGlobalFilter(table: Table, event: Event) {
-        table.filterGlobal((event.target as HTMLInputElement).value, 'contains');
-    }
-
-    openNew() {
-        this.router.navigate(['/pages/vocab/alter']);
-    }
-
-    editProduct() {
-        this.router.navigate(['/pages/vocab/alter']);
-    }
-
-    deleteSelectedProducts() {
-        this.confirmationService.confirm({
-            message: 'Are you sure you want to delete the selected products?',
-            header: 'Confirm',
-            icon: 'pi pi-exclamation-triangle',
-            accept: () => {
-                this.kanjiList.set(this.kanjiList().filter((val) => !this.selectedKanji?.includes(val)));
-                this.selectedKanji = null;
-                this.messageService.add({
-                    severity: 'success',
-                    summary: 'Successful',
-                    detail: 'Products Deleted',
-                    life: 3000
-                });
+                // Only fetch if we're returning to the list view from CRUD
+                if (wasCrud && !this.isCrud) {
+                    this.fetchVocabs();
+                }
             }
         });
     }
 
-    hideDialog() {
-        this.submitted = false;
+    private updateCrudState(url: string) {
+        const isAlterRoute = url.includes('/alter');
+        this.showTable = !isAlterRoute;
+        this.isCrud = isAlterRoute;
     }
 
-    deleteProduct(product: IVocab) {
+    fetchVocabs() {
+        const pageNumber = Math.floor(this.page / this.perPage) + 1;
+
+        this.kanjiService
+            .getVocabListPaginated({
+                per_page: this.perPage,
+                page: pageNumber
+            })
+            .then((data) => {
+                if (data.success) {
+                    this.kanjiList.set(data.data);
+                    this.totalRecords = data.pagination?.totalData ?? data.data.length;
+                }
+            });
+    }
+
+    onPageChange(event: TablePageEvent) {
+        this.page = event.first ?? 0; // Keep the raw first value
+        this.perPage = event.rows ?? this.perPage;
+        this.fetchVocabs();
+    }
+
+    onGlobalFilter() {
+        this.kanjiService
+            .getVocabListPaginated({
+                per_page: this.perPage,
+                page: 1,
+                char: this.filterText
+            })
+            .then((data) => {
+                if (data.success) {
+                    this.kanjiList.set(data.data);
+                    this.totalRecords = data.pagination?.totalData ?? data.data.length;
+                }
+            });
+    }
+
+    onNewOrBack() {
+        if (!this.isCrud) {
+            this.router.navigate(['/pages/vocab/alter']);
+        } else {
+            this.location.back();
+        }
+    }
+
+    onEdit(kanji: IKanji) {
+        if (!this.isCrud) {
+            this.router.navigate(['/pages/vocab/alter'], {
+                queryParams: { char: kanji.char },
+                state: {
+                    mode: 'edit'
+                }
+            });
+        } else {
+            this.location.back();
+        }
+    }
+
+    async onDeleteSelected() {
         this.confirmationService.confirm({
-            message: 'Are you sure you want to delete ' + product.char + '?',
+            message: 'Are you sure you want to delete the selected vocabs?',
             header: 'Confirm',
             icon: 'pi pi-exclamation-triangle',
-            accept: () => {
-                this.kanjiList.set(this.kanjiList().filter((val) => val.char !== product.char));
-                this.vocab = undefined;
-                this.messageService.add({
-                    severity: 'success',
-                    summary: 'Successful',
-                    detail: 'Product Deleted',
-                    life: 3000
-                });
+            accept: async () => {
+                if (!this.selectedKanji) return;
+
+                try {
+                    for (const vocab of this.selectedKanji) {
+                        const result = await this.kanjiService.deleteVocab(vocab.lesson_id ?? '');
+                        if (!result.success) {
+                            throw new Error(result.message);
+                        }
+                    }
+
+                    this.messageService.add({
+                        severity: 'success',
+                        summary: 'Successful',
+                        detail: 'Vocabs Deleted',
+                        life: 3000
+                    });
+                    this.selectedKanji = null;
+                    this.fetchVocabs();
+                } catch (error) {
+                    this.messageService.add({
+                        severity: 'error',
+                        summary: 'Error',
+                        detail: error instanceof Error ? error.message : 'Failed to delete vocabs',
+                        life: 3000
+                    });
+                }
             }
         });
     }
 
-    saveProduct() {
-        this.submitted = true;
+    onDelete(item: IKanji) {
+        this.confirmationService.confirm({
+            message:
+                'Are you sure you want to delete ' + item.char + ' - ' + item.meaning_primary + '?',
+            header: 'Confirm',
+            icon: 'pi pi-exclamation-triangle',
+            accept: async () => {
+                try {
+                    const result = await this.kanjiService.deleteVocab(item.lesson_id ?? '');
+                    if (!result.success) {
+                        throw new Error(result.message);
+                    }
+
+                    this.messageService.add({
+                        severity: 'success',
+                        summary: 'Successful',
+                        detail: 'Vocab Deleted',
+                        life: 3000
+                    });
+                    this.fetchVocabs();
+                } catch (error) {
+                    this.messageService.add({
+                        severity: 'error',
+                        summary: 'Error',
+                        detail: error instanceof Error ? error.message : 'Failed to delete vocab',
+                        life: 3000
+                    });
+                }
+            }
+        });
     }
 }

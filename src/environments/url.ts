@@ -15,7 +15,10 @@ export const HOST = {
         },
         VOCAB: {
             LIST: '/lessons/vocab/list',
-            DETAIL: '/lessons/detail/vocab'
+            DETAIL: '/lessons/detail/vocab',
+            ADD: '/lessons/vocab/add',
+            EDIT: '/lessons/vocab/edit',
+            DELETE: '/lessons/vocab/delete'
         }
     },
     READINGS: {
