@@ -751,15 +751,15 @@ export class KanjiCrud implements OnInit {
             radicalCombination: rc
         };
         console.log(payload);
-        // let resp = await this.kanjiService.addKanji(payload);
-        // if (resp.success) {
-        //     this.router.navigate(['/pages/kanji'], {
-        //         state: {
-        //             message: resp.message
-        //         }
-        //     });
-        // } else {
-        //     console.log(resp);
-        // }
+        let resp = await this.kanjiService.addKanji(payload);
+        if (resp.success) {
+            this.router.navigate(['/pages/kanji'], {
+                state: {
+                    message: resp.message
+                }
+            });
+        } else {
+            console.log(resp);
+        }
     }
 }
